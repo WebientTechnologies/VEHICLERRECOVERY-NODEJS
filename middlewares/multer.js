@@ -125,3 +125,70 @@ exports.imageMultiUpload = (req, res, next) => {
       });
   });
 };
+
+
+
+exports.imageBulkUpload= (req, res, next)=>{
+  multerConfig.fields([
+    { name: "photo"},
+    { name: "signature" },
+    { name: "aadhar" },
+    { name: "pancard" },
+    { name: "cheque" },
+    { name: "licence" },
+  ])(req, res, (error) => {
+    if (error) {
+      console.error("Multer Error:", error);
+      return next(new ErrorHandler("Multer upload failed", 500));
+    }
+
+    // Initialize an object to store the S3 URLs for each uploaded file
+    req.s3FileUrls = {};
+
+    // Map the uploaded files to S3 upload promises
+    const uploadPromises = Object.keys(req.files).map((fieldName) => {
+      return Promise.all(
+        req.files[fieldName].map((file) => {
+          const uniqueKey = `${Date.now()}-${Math.floor(Math.random() * 10000)}-${file.originalname}`;
+
+          // Define the S3 upload parameters for each file
+          const s3Params = {
+            Bucket: process.env.AWS_BUCKET, // Replace with your S3 bucket name
+            Key: `${s3Destination}${uniqueKey}`, // Set the S3 key for the uploaded file
+            Body: file.buffer, // Use the file buffer from Multer
+            ContentType: file.mimetype, // Set the content type based on the file's mimetype
+            // ACL: "public-read", // Set access permissions as needed
+          };
+
+          // Return a promise that resolves when the file is uploaded to S3
+          return new Promise((resolve, reject) => {
+            s3.putObject(s3Params, (err, data) => {
+              if (err) {
+                console.error("S3 Upload Error:", err);
+                reject(err);
+              } else {
+                if (!req.s3FileUrls[fieldName]) req.s3FileUrls[fieldName] = [];
+                req.s3FileUrls[fieldName].push({
+                  bucket: process.env.AWS_BUCKET, // Replace with your S3 bucket name
+                  Key: `${s3Destination}${uniqueKey}`, // Set the S3 key for the uploaded file
+                  Url: `https://${s3Params.Bucket}.s3.amazonaws.com/${s3Params.Key}`,
+                });
+
+                resolve(data);
+              }
+            });
+          });
+        })
+      );
+    });
+
+    // Wait for all file uploads to S3 to complete
+    Promise.all(uploadPromises.flat())
+      .then(() => {
+        next(); // Continue to the next middleware if all uploads are successful
+      })
+      .catch((err) => {
+        next(new ErrorHandler("S3 upload failed", 500));
+      });
+  });
+}

@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cookieParser = require('cookie-parser');
+const { ErrorMiddleware } = require("./middlewares/Error");
 const sls = require("serverless-http");
 const cors = require('cors');
 
@@ -36,6 +37,7 @@ app.listen(PORT, () =>{
     console.log(`Server started Successfully at ${PORT}`);
 })
 
+app.use(ErrorMiddleware);
 
 const dbConnect = require("./config/database");
 dbConnect();
