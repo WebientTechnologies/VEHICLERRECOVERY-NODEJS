@@ -10,9 +10,14 @@ const emiAgentController = require('../controllers/emiAgentController');
 const officeStafController =  require('../controllers/officeStafController');
 const repoAgentController = require('../controllers/repoAgentController');
 const idCardController = require('../controllers/idCardController');
+const vehicleController = require("../controllers/vehicleDataController");
 
 
 
+
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const {auth, isAdmin,}  = require('../middlewares/Auth');
 
@@ -77,7 +82,9 @@ router.post("/generate-qr/:cardId", auth, idCardController.generateQRCode);
 router.get("/get-card/:cardId", idCardController.getCardDetails);
 router.get("/get-all-cards", auth, idCardController.getAllCards);
 
-
+router.post("/upload", upload.single("file"), vehicleController.uploadFile);
+router.post("/upload-bank-wise-data", upload.single("file"), vehicleController.uploadBankWiseData);
+router.get("/get-data", vehicleController.getUploadedData);
 
 
 module.exports = router;
