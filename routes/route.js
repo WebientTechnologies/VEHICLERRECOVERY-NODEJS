@@ -82,9 +82,13 @@ router.post("/generate-qr/:cardId", auth, idCardController.generateQRCode);
 router.get("/get-card/:cardId", idCardController.getCardDetails);
 router.get("/get-all-cards", auth, idCardController.getAllCards);
 
-router.post("/upload", upload.single("file"), vehicleController.uploadFile);
-router.post("/upload-bank-wise-data", upload.single("file"), vehicleController.uploadBankWiseData);
-router.get("/get-data", vehicleController.getUploadedData);
+//Vehicle Data Route//
+router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
+router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
+router.get("/get-data", auth, vehicleController.getUploadedData);
+router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
+router.get("/search",auth, vehicleController.searchVehicle);
+router.get("/get-details-by-reg/:regNo", auth, vehicleController.getByRegNo);
 
 
 module.exports = router;

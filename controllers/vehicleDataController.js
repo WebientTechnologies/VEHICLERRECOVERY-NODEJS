@@ -32,6 +32,7 @@ exports.uploadFile = catchError(async (req, res) => {
       // Process each row and create records in the database
     for (const row of data) {
       const fileName = `${month}${fileNameSuffix}.xlsx`;
+      const lastDigit = row.LastDigit || (row.Regdno ? row.Regdno.slice(-4) : '');
 
       const vehicleData = new VehicleData({
         bankName: row.Bankname,
@@ -58,7 +59,7 @@ exports.uploadFile = catchError(async (req, res) => {
         callCenterNo4: row.Callcenterno4,
         callCenterNo4Name: row.Callcenterno4name,
         callCenterNo4Email: row.Callcenterno4mailid,
-        lastDigit: row.LastDigit,
+        lastDigit: lastDigit,
         month: month,
         loaStatus: loadStatus,
         fileName: fileName,
@@ -100,7 +101,7 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
       // Process each row and create records in the database
     for (const row of data) {
       const fileName = `${month}${fileNameSuffix}.xlsx`;
-
+      const lastDigit = row.LastDigit || (row.Regdno ? row.Regdno.slice(-4) : '');
       const vehicleData = new VehicleData({
         bankName: bank,
         branch: row.Branch,
@@ -126,7 +127,7 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
         callCenterNo4: row.Callcenterno4,
         callCenterNo4Name: row.Callcenterno4name,
         callCenterNo4Email: row.Callcenterno4mailid,
-        lastDigit: row.LastDigit,
+        lastDigit: lastDigit,
         month: month,
         loaStatus: loadStatus,
         fileName: fileName,
@@ -194,3 +195,45 @@ exports.getUploadedData = catchError(async (req, res) => {
     res.status(200).json({ data: result });
 });
   
+exports.getVehicleStatusCounts = catchError(async (req, res) => {
+ 
+    const totalCount = await VehicleData.countDocuments();
+    
+    const holdCount = await VehicleData.countDocuments({ status: "hold" });
+    
+    const repoCount = await VehicleData.countDocuments({ status: "repo" });
+    
+    const releaseCount = await VehicleData.countDocuments({ status: "release" });
+
+    res.status(200).json({
+      totalCount: totalCount,
+      holdCount: holdCount,
+      repoCount: repoCount,
+      releaseCount: releaseCount,
+    });
+});
+
+exports.searchVehicle = catchError(async(req, res) =>{
+  if(req.query.lastDigit){
+    const regNos = await VehicleData.find({lastDigit:req.query.lastDigit}).select('regNo').exec();
+    return res.status(200).json({regNos});
+  }
+  if(req.query.agreementNo){
+    const data = await VehicleData.findOne({agreementNo:req.query.agreementNo});
+    return res.status(200).json({data});
+  }
+  if(req.query.engineNo){
+    const data = await VehicleData.findOne({engineNo:req.query.engineNo});
+    return res.status(200).json({data});
+  }
+  if(req.query.chasisNo){
+    const data = await VehicleData.findOne({chasisNo:req.query.chasisNo});
+    return res.status(200).json({data});
+  }
+});
+
+exports.getByRegNo = catchError(async(req, res) =>{
+  const {regNo} = req.params;
+  const data = await VehicleData.findOne({regNo:regNo});
+  return res.status(200).json({data});
+});
