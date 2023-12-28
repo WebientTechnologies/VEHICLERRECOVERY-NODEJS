@@ -24,7 +24,7 @@ exports.createIdCard = catchError(async (req, res) => {
 
         let nextcardId;
         if (latestCard) {
-        const latestCardIdNumber = parseInt(latestCard.stafId.substring(3));
+        const latestCardIdNumber = parseInt(latestCard.cardId.substring(3));
         nextcardId = `IC${(latestCardIdNumber + 1).toString().padStart(4, '0')}`;
         } else {
             nextcardId = 'IC0001';
@@ -91,3 +91,19 @@ exports.getAllCards = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+exports.getNewCardId = catchError(async(req, res) =>{
+  const latestCard = await IdCard.findOne().sort({ cardId: -1 }).limit(1);
+
+  let nextcardId;
+  if (latestCard) {
+  const latestCardIdNumber = parseInt(latestCard.cardId.substring(3));
+  nextcardId = `IC${(latestCardIdNumber + 1).toString().padStart(4, '0')}`;
+  } else {
+      nextcardId = 'IC0001';
+  }
+  res.status(200).json({
+    success: true,
+    cardId: nextcardId,
+  });
+})

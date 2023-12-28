@@ -147,3 +147,20 @@ exports.getAgentById = catchError(async(req, res) =>{
                     .exec();
     return res.status(201).json({agent});
 });
+
+exports.getNewAgentId = catchError(async(req, res) =>{
+    const latestAgent = await RepoAgent.findOne().sort({ agentId: -1 }).limit(1);
+
+    let nextagentId;
+    if (latestAgent) {
+    const latestAgentIdNumber = parseInt(latestAgent.agentId.substring(3));
+    nextagentId = `S${(latestAgentIdNumber + 1).toString().padStart(4, '0')}`;
+    } else {
+        nextagentId = 'S0001';
+    }
+
+    res.status(200).json({
+        success: true,
+        agentId: nextagentId,
+    });
+})

@@ -91,19 +91,38 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
         month: month,
       }).sort({ fileName: -1 });
   
-      // Extract the suffix number from the latest fileName
-      let fileNameSuffix = 1;
-      if (latestRecord && latestRecord.fileName) {
-        const match = latestRecord.fileName.match(/(\d+)/);
-        fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-      }
+    const latestRecordByBank = await VehicleData.findOne({
+      month: month,
+    }).sort({ bankName: -1 });
+
   
-      // Process each row and create records in the database
+    let fileNameSuffix = 1;
+    if (latestRecord && latestRecord.fileName) {
+      const match = latestRecord.fileName.match(/(\d+)/);
+      fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+    }
+    let bankNameSuffix = 1;
+    const simplifiedBankName = bank.split(' ')[0];
+    if (latestRecordByBank && latestRecordByBank.bankName) {
+      const trimmedBankName = latestRecordByBank.bankName.slice(0, -1);
+      const reqBankName = `${simplifiedBankName } ${month}`;
+      if(trimmedBankName == reqBankName ){
+        const match = latestRecordByBank.bankName.match(/(\d+)$/);
+        bankNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+      }else{
+        bankNameSuffix = 1;
+      }
+    }
+   
     for (const row of data) {
       const fileName = `${month}${fileNameSuffix}.xlsx`;
+
+      
+      let bankName = `${simplifiedBankName } ${month}${bankNameSuffix}`;
+
       const lastDigit = row.LastDigit || (row.Regdno ? row.Regdno.slice(-4) : '');
       const vehicleData = new VehicleData({
-        bankName: bank,
+        bankName: bankName,
         branch: row.Branch,
         agreementNo: row.Agreementno,
         customerName: row.Custname,
@@ -183,10 +202,10 @@ exports.getUploadedData = catchError(async (req, res) => {
         },
       },
       {
-        $skip: (page - 1) * 2, 
+        $skip: (page - 1) * 10, 
       },
       {
-        $limit: 2, 
+        $limit: 10, 
       },
     ];
   
@@ -205,11 +224,14 @@ exports.getVehicleStatusCounts = catchError(async (req, res) => {
     
     const releaseCount = await VehicleData.countDocuments({ status: "release" });
 
+    const confirmationCount = await VehicleData.countDocuments({ status: "pending" });
+
     res.status(200).json({
       totalCount: totalCount,
       holdCount: holdCount,
       repoCount: repoCount,
       releaseCount: releaseCount,
+      confirmationCount: confirmationCount,
     });
 });
 
@@ -237,3 +259,104 @@ exports.getByRegNo = catchError(async(req, res) =>{
   const data = await VehicleData.findOne({regNo:regNo});
   return res.status(200).json({data});
 });
+
+exports.allVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10; 
+
+  const skip = (page - 1) * pageSize;
+
+  const vehiclesList = await VehicleData.find().skip(skip).limit(pageSize);
+
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+
+exports.holdVehicleList = catchError(async(req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+  const vehiclesList = await VehicleData.find({status:"hold"}).skip(skip).limit(pageSize);
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+exports.repoVehicleList = catchError(async(req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+  const vehiclesList = await VehicleData.find({status:"repo"}).skip(skip).limit(pageSize);
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+exports.releaseVehicleList = catchError(async(req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+  const vehiclesList = await VehicleData.find({status:"release"}).skip(skip).limit(pageSize);
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+exports.searchedVehicleList = catchError(async(req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+  const vehiclesList = await VehicleData.find({status:"search"}).skip(skip).limit(pageSize);
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+exports.confirmationVehicleList = catchError(async(req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+  let query = { status: "pending" };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name'). exec();
+  return res.status(200).json({
+    vehiclesList,
+    currentPage: page,
+    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+  });
+});
+
+
+
+function escapeRegex(text) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}

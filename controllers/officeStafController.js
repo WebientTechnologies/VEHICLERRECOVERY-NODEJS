@@ -1,5 +1,10 @@
 const OfficeStaf = require('../models/officeStaf');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { options } = require("../routes/route");
+const nodemailer = require('nodemailer');
+require("dotenv").config();
 const { catchError } = require("../middlewares/CatchError");
 
 exports.createOfficestaf = catchError(async (req, res) => {
@@ -76,4 +81,104 @@ exports.createOfficestaf = catchError(async (req, res) => {
      return res.status(201).json({savedOfficestaf});
     
   });
+
+
+  exports.getOfficeStaf = catchError(async(req, res) =>{
+    const stafs = await OfficeStaf.find();
+    return res.status(200).json({stafs});
+  });
+  
+
+  exports.login = async (req,res) => {
+    try {
+
+      const {email, password, deviceId} = req.body;
+      if(!email || !password) {
+          return res.status(400).json({
+              success:false,
+              message:'PLease fill all the details carefully',
+          });
+      }
+
+      //check for registered user
+      let staf = await OfficeStaf.findOne({email});
+      if(!staf) {
+          return res.status(401).json({
+              success:false,
+              message:'Office Staf is not registered',
+          });
+      }
+      if (staf.deviceId === deviceId || !staf.deviceId) {
+            const payload = {
+                email:staf.email,
+                _id:staf._id,
+            };
+            if(await bcrypt.compare(password,staf.password) ) {
+                let token =  jwt.sign(payload, 
+                                    process.env.JWT_SECRET,
+                                    {
+                                        expiresIn:"15d",
+                                    });
+                if(!staf.deviceId){
+                    staf.deviceId = deviceId;
+                }
+                await staf.save();
+                staf = staf.toObject();
+                staf.token = token;
+                staf.password = undefined;
+
+                const options = {
+                    expires: new Date( Date.now() + 15 * 24 * 60 * 60 * 1000),
+                    httpOnly:true,
+                    sameSite: 'none',
+                    secure: true,
+                }
+
+                res.cookie("token", token, options).status(200).json({
+                    success:true,
+                    staf,
+                    message:'Office Staf Logged in successfully',
+                });
+            }
+            else {
+                return res.status(403).json({
+                    success:false,
+                    message:"Password Incorrect",
+                });
+            }
+        }else {
+            return res.status(403).json({
+            success: false,
+            message: 'You have already logged In to other device! Ask Admin to change device.',
+            });
+        }
+    }
+    catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:'Login Failure',
+        });
+
+    }
+}
+
+
+exports.getLastStaffId = catchError(async(req, res) =>{
+    const latestStaf = await OfficeStaf.findOne().sort({ stafId: -1 }).limit(1);
+
+    let nextstafId;
+    if (latestStaf) {
+    const latestStafIdNumber = parseInt(latestStaf.stafId.substring(3));
+    nextstafId = `OS${(latestStafIdNumber + 1).toString().padStart(4, '0')}`;
+    } else {
+        nextstafId = 'OS0001';
+    }
+
+    res.status(200).json({
+      success: true,
+      stafId: nextstafId,
+    });
+})
+
   

@@ -67,6 +67,9 @@ router.put("/change-password/:id", auth, emiAgentController.changePassword);
 
 //Office Staf Route//
 router.post("/create-staf", auth, imageBulkUpload, officeStafController.createOfficestaf);
+router.get("/get-staf", auth, officeStafController.getOfficeStaf);
+router.post("/login-office-staf", officeStafController.login);
+router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 
 //Repo Agent Route//
 router.post("/create-repo-agent", auth, repoAgentController.createRepoAgent);
@@ -75,12 +78,14 @@ router.put("/change-agent-device/:id", auth, repoAgentController.changeDevice);
 router.put("/change-agent-password/:id", auth, repoAgentController.changePassword);
 router.get("/get-all-repo-agents", auth, repoAgentController.getAllRepoAgents);
 router.get("/get-agent-by-id/:id",auth, repoAgentController.getAgentById);
+router.get("/repo-agentId", auth, repoAgentController.getNewAgentId);
 
 //id Card Route//
 router.post("/create-id-card", auth, imageBulkUpload, idCardController.createIdCard);
 router.post("/generate-qr/:cardId", auth, idCardController.generateQRCode);
 router.get("/get-card/:cardId", idCardController.getCardDetails);
 router.get("/get-all-cards", auth, idCardController.getAllCards);
+router.get("/cardId", auth, idCardController.getNewCardId);
 
 //Vehicle Data Route//
 router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
@@ -89,6 +94,12 @@ router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
 router.get("/search",auth, vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo", auth, vehicleController.getByRegNo);
+router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
+router.get("/hold-vehicle-list",  vehicleController.holdVehicleList);
+router.get("/repo-vehicle-list",  vehicleController.repoVehicleList);
+router.get("/release-vehicle-list",  vehicleController.releaseVehicleList);
+router.get("/search-vehicle-list", auth, vehicleController.searchedVehicleList);
+router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVehicleList);
 
 
 module.exports = router;

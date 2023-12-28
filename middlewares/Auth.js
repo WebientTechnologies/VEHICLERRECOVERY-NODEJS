@@ -27,6 +27,12 @@ exports.auth = async(req, res , next) => {
         const userId = decodedToken._id;
         console.log({userId, token,decodedToken})
         req.user = await user.findById(userId);
+        if (!req.user) {
+            return res.status(401).json({
+              success: false,
+              message: 'Invalid or expired token',
+            });
+        }
         next();
       } catch (err) {
         return res.status(401).json({
