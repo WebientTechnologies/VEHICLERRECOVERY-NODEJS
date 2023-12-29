@@ -235,6 +235,25 @@ exports.getVehicleStatusCounts = catchError(async (req, res) => {
     });
 });
 
+exports.staffDashboard = catchError(async (req, res) => {
+ 
+ 
+  const holdCount = await VehicleData.countDocuments({ status: "hold" });
+  
+  const repoCount = await VehicleData.countDocuments({ status: "repo" });
+  
+  const releaseCount = await VehicleData.countDocuments({ status: "release" });
+  const searchCount = await VehicleData.countDocuments({ status: "search" });
+
+
+  res.status(200).json({
+    holdCount: holdCount,
+    repoCount: repoCount,
+    releaseCount: releaseCount,
+    searchCount: searchCount,
+  });
+});
+
 exports.searchVehicle = catchError(async(req, res) =>{
   if(req.query.lastDigit){
     const regNos = await VehicleData.find({lastDigit:req.query.lastDigit}).select('regNo').exec();

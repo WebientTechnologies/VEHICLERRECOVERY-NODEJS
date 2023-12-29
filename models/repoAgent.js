@@ -168,11 +168,16 @@ const repoagents = new mongoose.Schema(
             required:false,
             maxLength:255,
         },
-        createdBy:{
+        createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: false,      
-        }
+            refPath: 'createdByType', 
+            required: false,
+        },
+        createdByType: {
+            type: String,
+            enum: ['User', 'OfficeStaf'],
+            required: false,
+        },
     },
     { timestamps: true,}
 );

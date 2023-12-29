@@ -80,16 +80,16 @@ exports.createOfficestaf = catchError(async (req, res) => {
       console.log("Office Staf Created:", savedOfficestaf);
      return res.status(201).json({savedOfficestaf});
     
-  });
+});
 
 
-  exports.getOfficeStaf = catchError(async(req, res) =>{
+exports.getOfficeStaf = catchError(async(req, res) =>{
     const stafs = await OfficeStaf.find();
     return res.status(200).json({stafs});
-  });
+});
   
 
-  exports.login = async (req,res) => {
+exports.login = async (req,res) => {
     try {
 
       const {email, password, deviceId} = req.body;
@@ -112,6 +112,7 @@ exports.createOfficestaf = catchError(async (req, res) => {
             const payload = {
                 email:staf.email,
                 _id:staf._id,
+                tokenVersion:staf.tokenVersion,
             };
             if(await bcrypt.compare(password,staf.password) ) {
                 let token =  jwt.sign(payload, 
@@ -179,6 +180,37 @@ exports.getLastStaffId = catchError(async(req, res) =>{
       success: true,
       stafId: nextstafId,
     });
-})
+});
+
+exports.changePassord = catchError(async(req, res) =>{
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const authenticatedUser = req.officeStaf;
+  
+    const stafId = authenticatedUser._id; 
+  
+    const staff = await OfficeStaf.findById(stafId);
+
+    if (!staff) {
+    return res.status(404).json({ message: 'Office Staff not found' });
+    }
+
+    // Verify the old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, staff.password);
+
+    if (!isPasswordValid) {
+    return res.status(401).json({ message: 'Incorrect old password' });
+    }
+
+    if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    staff.password = hashedPassword;
+    staff.tokenVersion += 1;
+    await staff.save();
+    return res.status(200).json({ message: 'Password updated successfully' });
+});
 
   

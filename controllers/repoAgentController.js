@@ -34,7 +34,8 @@ exports.createRepoAgent = catchError(async (req, res) => {
         } else {
             nextagentId = 'S0001';
         }
-     const userId = req.user._id
+     const userId = req.user ? req.user._id : req.officeStaf._id;
+     const type = req.user ? 'User' : 'OfficeStaf'
       const newRepoAgent = new RepoAgent({
         agentId:nextagentId,
         zoneId, 
@@ -53,7 +54,8 @@ exports.createRepoAgent = catchError(async (req, res) => {
         pincode, 
         username, 
         password:hashedPassword,
-        createdBy:userId
+        createdBy:userId,
+        createdByType: type
       });
   
       const savedRepoAgent = await newRepoAgent.save();

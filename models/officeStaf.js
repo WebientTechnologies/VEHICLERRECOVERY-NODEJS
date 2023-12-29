@@ -185,6 +185,12 @@ const officestafs = new mongoose.Schema(
                 maxLength:255,
             }
         },
+        otp: {
+            type:String,
+            required:false,
+            maxLength:255,
+        },
+        tokenVersion: { type: Number, default: 0 },
     },
     { timestamps: true,}
 );

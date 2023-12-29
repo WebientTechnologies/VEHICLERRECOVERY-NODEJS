@@ -31,6 +31,12 @@ exports.officeStafAuth = async(req, res , next) => {
               message: 'Invalid or expired token',
             });
         }
+        if (decodedToken.tokenVersion !== req.officeStaf.tokenVersion) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid or expired token',
+          });
+      }
         next();
       } catch (err) {
         return res.status(401).json({

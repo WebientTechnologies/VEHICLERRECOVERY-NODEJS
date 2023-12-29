@@ -20,12 +20,16 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const {auth, isAdmin,}  = require('../middlewares/Auth');
-
+const {officeStafAuth} = require('../middlewares/officeStafAuth');
 const { imageSingleUpload , imageMultiUpload, imageBulkUpload} = require("../middlewares/multer");
+
+//=========================================================================================================//
 // Home 
 router.get("/", (req, res) =>{
     res.send("Welcome to Vehicle Recovery Backend");
 });
+
+                                        //****Admin Routes ****//
 
 //User Route//
 router.post("/register-user", userController.signUp);
@@ -53,8 +57,8 @@ router.get("/get-state-by-zone/:zoneId", auth, stateController.getByZone);
 
 //City Route//
 router.post("/create-city", auth, cityController.createCity);
-router.get("/get-all-city", auth, cityController.getAllCity);
-router.get("/get-city-by-state/:stateId", auth, cityController.getByState);
+router.get("/get-all-city",  cityController.getAllCity);
+router.get("/get-city-by-state/:stateId", cityController.getByState);
 
 //Agent Route//
 router.post("/create-agent", auth, emiAgentController.createAgent);
@@ -76,9 +80,9 @@ router.post("/create-repo-agent", auth, repoAgentController.createRepoAgent);
 router.put("/change-agent-status/:id", auth, repoAgentController.changeStatus);
 router.put("/change-agent-device/:id", auth, repoAgentController.changeDevice);
 router.put("/change-agent-password/:id", auth, repoAgentController.changePassword);
-router.get("/get-all-repo-agents", auth, repoAgentController.getAllRepoAgents);
-router.get("/get-agent-by-id/:id",auth, repoAgentController.getAgentById);
-router.get("/repo-agentId", auth, repoAgentController.getNewAgentId);
+router.get("/get-all-repo-agents", repoAgentController.getAllRepoAgents);
+router.get("/get-agent-by-id/:id", repoAgentController.getAgentById);
+router.get("/repo-agentId", repoAgentController.getNewAgentId);
 
 //id Card Route//
 router.post("/create-id-card", auth, imageBulkUpload, idCardController.createIdCard);
@@ -91,15 +95,42 @@ router.get("/cardId", auth, idCardController.getNewCardId);
 router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
-router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
 router.get("/search",auth, vehicleController.searchVehicle);
-router.get("/get-details-by-reg/:regNo", auth, vehicleController.getByRegNo);
+router.get("/get-details-by-reg/:regNo",  vehicleController.getByRegNo);
+
+// Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
 router.get("/hold-vehicle-list",  vehicleController.holdVehicleList);
 router.get("/repo-vehicle-list",  vehicleController.repoVehicleList);
 router.get("/release-vehicle-list",  vehicleController.releaseVehicleList);
 router.get("/search-vehicle-list", auth, vehicleController.searchedVehicleList);
 router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVehicleList);
+
+//Dashboard Route//
+router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
+
+//================================================================================================//
+
+                        //****Office Staff Routes ****//
+
+//Dashboard//
+router.get("/office-staff-dashboard", officeStafAuth, vehicleController.staffDashboard);
+
+//Profile//
+router.put("/update-password", officeStafAuth, officeStafController.changePassord);
+
+//Search//
+router.get("/search-by-office-staff",officeStafAuth, vehicleController.searchVehicle);
+
+//Repo Agent//
+router.post("/create-repo-agent-by-staff", officeStafAuth, repoAgentController.createRepoAgent);
+router.put("/change-agent-status-by-staff/:id", officeStafAuth, repoAgentController.changeStatus);
+router.put("/change-agent-device-staff/:id", officeStafAuth, repoAgentController.changeDevice);
+router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentController.changePassword);
+
+//Report//
+router.get("/search-vehicle-list-by-staff", officeStafAuth, vehicleController.searchedVehicleList);
+
 
 
 module.exports = router;
