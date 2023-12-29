@@ -284,8 +284,27 @@ exports.allVehicleList = catchError(async (req, res) => {
   const pageSize = 10; 
 
   const skip = (page - 1) * pageSize;
+  let query = {  };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
 
-  const vehiclesList = await VehicleData.find().skip(skip).limit(pageSize);
+  const vehiclesList = await VehicleData.find().skip(skip).limit(pageSize).populate('seezerId','name').exec();
 
   return res.status(200).json({
     vehiclesList,
@@ -299,7 +318,26 @@ exports.holdVehicleList = catchError(async(req, res) => {
   const page = parseInt(req.query.page) || 1; 
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
-  const vehiclesList = await VehicleData.find({status:"hold"}).skip(skip).limit(pageSize);
+  let query = { status: "hold" };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
+  const vehiclesList = await VehicleData.find({status:"hold"}).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -311,7 +349,26 @@ exports.repoVehicleList = catchError(async(req, res) => {
   const page = parseInt(req.query.page) || 1; 
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
-  const vehiclesList = await VehicleData.find({status:"repo"}).skip(skip).limit(pageSize);
+  let query = { status: "repo" };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
+  const vehiclesList = await VehicleData.find({status:"repo"}).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -323,7 +380,26 @@ exports.releaseVehicleList = catchError(async(req, res) => {
   const page = parseInt(req.query.page) || 1; 
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
-  const vehiclesList = await VehicleData.find({status:"release"}).skip(skip).limit(pageSize);
+  let query = { status: "release" };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -335,7 +411,26 @@ exports.searchedVehicleList = catchError(async(req, res) => {
   const page = parseInt(req.query.page) || 1; 
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
-  const vehiclesList = await VehicleData.find({status:"search"}).skip(skip).limit(pageSize);
+  let query = { status: "search" };
+  if (req.query.search) {
+    const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
+    query = {
+      ...query,
+      $or: [
+        { bankName: searchRegex },
+        { branch: searchRegex },
+        {agreementNo: searchRegex},
+        {customerName: searchRegex},
+        {regNo: searchRegex},
+        {chasisNo: searchRegex},
+        {engineNo: searchRegex},
+        {model: searchRegex},
+        {dlCode: searchRegex},   
+        { 'seezerId.name': searchRegex },
+      ],
+    };
+  }
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -366,7 +461,7 @@ exports.confirmationVehicleList = catchError(async(req, res) => {
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name'). exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
