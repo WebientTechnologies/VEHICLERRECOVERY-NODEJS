@@ -178,6 +178,7 @@ const repoagents = new mongoose.Schema(
             enum: ['User', 'OfficeStaf'],
             required: false,
         },
+        tokenVersion: { type: Number, default: 0 },
     },
     { timestamps: true,}
 );

@@ -72,7 +72,6 @@ router.put("/change-password/:id", auth, emiAgentController.changePassword);
 //Office Staf Route//
 router.post("/create-staf", auth, imageBulkUpload, officeStafController.createOfficestaf);
 router.get("/get-staf", auth, officeStafController.getOfficeStaf);
-router.post("/login-office-staf", officeStafController.login);
 router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 
 //Repo Agent Route//
@@ -95,7 +94,7 @@ router.get("/cardId", auth, idCardController.getNewCardId);
 router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
-router.get("/search",auth, vehicleController.searchVehicle);
+router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo",  vehicleController.getByRegNo);
 
 // Reports Route//
@@ -113,14 +112,15 @@ router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
 
                         //****Office Staff Routes ****//
 
+
+router.post("/login-office-staf", officeStafController.login);
+
 //Dashboard//
 router.get("/office-staff-dashboard", officeStafAuth, vehicleController.staffDashboard);
 
 //Profile//
 router.put("/update-password", officeStafAuth, officeStafController.changePassord);
 
-//Search//
-router.get("/search-by-office-staff",officeStafAuth, vehicleController.searchVehicle);
 
 //Repo Agent//
 router.post("/create-repo-agent-by-staff", officeStafAuth, repoAgentController.createRepoAgent);
@@ -130,6 +130,12 @@ router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentControll
 
 //Report//
 router.get("/search-vehicle-list-by-staff", officeStafAuth, vehicleController.searchedVehicleList);
+
+
+//======================================================================================================//
+                                //****Repo Agent Routes****//
+
+router.post("/login-repo-agent", repoAgentController.login);
 
 
 

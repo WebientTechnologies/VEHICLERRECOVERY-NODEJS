@@ -86,7 +86,6 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
 
     const month = req.body.month; 
     const bank = req.body.bank; 
-    const loadStatus = "Success";
     const latestRecord = await VehicleData.findOne({
         month: month,
       }).sort({ fileName: -1 });
@@ -148,7 +147,6 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
         callCenterNo4Email: row.Callcenterno4mailid,
         lastDigit: lastDigit,
         month: month,
-        loaStatus: loadStatus,
         fileName: fileName,
       });
 
@@ -188,7 +186,7 @@ exports.getUploadedData = catchError(async (req, res) => {
             },
           },
           count: { $sum: 1 },
-          loadStatus: { $first: "Success" },
+          status: { $first: "Success" },
         },
       },
       {
@@ -198,7 +196,7 @@ exports.getUploadedData = catchError(async (req, res) => {
           month: "$_id.month",
           createdAt: "$_id.createdAt",
           count: 1,
-          loadStatus: "$loadStatus",
+          status: "$status",
         },
       },
       {

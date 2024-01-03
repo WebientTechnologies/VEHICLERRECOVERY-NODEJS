@@ -165,8 +165,8 @@ const vehiclesdata = new mongoose.Schema(
         },
         loadStatus: {
             type:String,
-            required:false,
-            maxLength:255,
+            enum:["empty", "goods", " "],
+            default:" "
         },
         loadItem: {
             type:String,

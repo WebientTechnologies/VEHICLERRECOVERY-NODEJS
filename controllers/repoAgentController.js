@@ -1,5 +1,10 @@
 const RepoAgent = require('../models/repoAgent');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { options } = require("../routes/route");
+const nodemailer = require('nodemailer');
+require("dotenv").config();
 const { catchError } = require("../middlewares/CatchError");
 
 exports.createRepoAgent = catchError(async (req, res) => {
@@ -64,6 +69,80 @@ exports.createRepoAgent = catchError(async (req, res) => {
     
   });
   
+exports.login = async (req,res) => {
+    try {
+
+      const {email, password, deviceId} = req.body;
+      if(!email || !password) {
+          return res.status(400).json({
+              success:false,
+              message:'PLease fill all the details carefully',
+          });
+      }
+
+      //check for registered user
+      let agent = await RepoAgent.findOne({email});
+      if(!agent) {
+          return res.status(401).json({
+              success:false,
+              message:'Repo Agent is not registered',
+          });
+      }
+      if (agent.deviceId === deviceId || !agent.deviceId) {
+            const payload = {
+                email:agent.email,
+                _id:agent._id,
+                tokenVersion:agent.tokenVersion,
+            };
+            if(await bcrypt.compare(password,agent.password) ) {
+                let token =  jwt.sign(payload, 
+                                    process.env.JWT_SECRET,
+                                    {
+                                        expiresIn:"15d",
+                                    });
+                if(!agent.deviceId){
+                    agent.deviceId = deviceId;
+                }
+                await agent.save();
+                agent = agent.toObject();
+                agent.token = token;
+                agent.password = undefined;
+
+                const options = {
+                    expires: new Date( Date.now() + 15 * 24 * 60 * 60 * 1000),
+                    httpOnly:true,
+                    sameSite: 'none',
+                    secure: true,
+                }
+
+                res.cookie("token", token, options).status(200).json({
+                    success:true,
+                    agent,
+                    message:'Repo Agent Logged in successfully',
+                });
+            }
+            else {
+                return res.status(403).json({
+                    success:false,
+                    message:"Password Incorrect",
+                });
+            }
+        }else {
+            return res.status(403).json({
+            success: false,
+            message: 'You have already logged In to other device! Ask Admin to change device.',
+            });
+        }
+    }
+    catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:'Login Failure',
+        });
+
+    }
+}
 
   exports.changeStatus = async(req, res) =>{
     try {
@@ -98,6 +177,7 @@ exports.changePassword = async(req, res) =>{
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(password, saltRounds);
             agent.password = hashedPassword;
+            agent.tokenVersion += 1;
             agent.save();
 
             return res.status(201).json({message:"Password Changed Successfully!"});
