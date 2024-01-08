@@ -10,7 +10,8 @@ app.use(
     cors({
         origin: [
             "http://localhost:3000",
-            "https://vinayak-associates.vercel.app"
+            "https://vinayak-associates.vercel.app",
+            "http://127.0.0.1:3000"
           ],
           credentials: true,
     })
