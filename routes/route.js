@@ -76,6 +76,7 @@ router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 
 //Repo Agent Route//
 router.post("/create-repo-agent", auth, repoAgentController.createRepoAgent);
+router.post("/register-repo-agent",  repoAgentController.registerRepoAgent);
 router.put("/change-agent-status/:id", auth, repoAgentController.changeStatus);
 router.put("/change-agent-device/:id", auth, repoAgentController.changeDevice);
 router.put("/change-agent-password/:id", auth, repoAgentController.changePassword);

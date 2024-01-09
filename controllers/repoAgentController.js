@@ -67,7 +67,66 @@ exports.createRepoAgent = catchError(async (req, res) => {
       console.log("Repo Agent Created:", savedRepoAgent);
      return res.status(201).json({savedRepoAgent});
     
-  });
+});
+
+exports.registerRepoAgent = catchError(async (req, res) => {
+    
+    const {zoneId, stateId, cityId, name, mobile,alternativeMobile, email, panCard, aadharCard, addressLine1, addressLine2, state, city, pincode, username, password } = req.body;
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const existingAgent = await RepoAgent.findOne({mobile:mobile});
+      if(existingAgent){
+          return res.status(409).json({message:"Mobile Number Is Already Exist! Please Try With Another One. Or Log In"});
+      }
+      const existingPan = await RepoAgent.findOne({panCard:panCard});
+      if(existingPan){
+          return res.status(409).json({message:"Pan Number Is Already Exist! "});
+      }
+      const existingAadhar = await RepoAgent.findOne({aadharCard:aadharCard});
+      if(existingAadhar){
+          return res.status(409).json({message:"Aadhar Number Is Already Exist! "});
+      }
+      const existingUsername = await RepoAgent.findOne({username:username});
+      if(existingUsername){
+          return res.status(409).json({message:"Username Is Already Taken! "});
+      }
+      const latestAgent = await RepoAgent.findOne().sort({ agentId: -1 }).limit(1);
+
+      let nextagentId;
+      if (latestAgent) {
+      const latestAgentIdNumber = parseInt(latestAgent.agentId.substring(3));
+      nextagentId = `S${(latestAgentIdNumber + 1).toString().padStart(4, '0')}`;
+      } else {
+          nextagentId = 'S0001';
+      }
+   
+    const newRepoAgent = new RepoAgent({
+      agentId:nextagentId,
+      zoneId, 
+      stateId, 
+      cityId,
+      name,
+      mobile,
+      alternativeMobile, 
+      email, 
+      panCard, 
+      aadharCard, 
+      addressLine1,
+      addressLine2, 
+      state, 
+      city, 
+      pincode, 
+      username, 
+      password:hashedPassword,
+    });
+
+    const savedRepoAgent = await newRepoAgent.save();
+    console.log("Repo Agent Created:", savedRepoAgent);
+   return res.status(201).json({savedRepoAgent});
+  
+});
   
 exports.login = async (req,res) => {
     try {
