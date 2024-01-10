@@ -48,12 +48,12 @@ router.get("/get-bank-by-id/:id", auth, bankController.getBankById);
 
 //zone Route//
 router.post("/create-zone", auth, zoneController.createZone);
-router.get("/zones", auth, zoneController.getZones);
+router.get("/zones",  zoneController.getZones);
 
 //State Route//
 router.post("/create-state", auth, stateController.createState);
-router.get("/get-all-states", auth, stateController.getAllState);
-router.get("/get-state-by-zone/:zoneId", auth, stateController.getByZone);
+router.get("/get-all-states",  stateController.getAllState);
+router.get("/get-state-by-zone/:zoneId",  stateController.getByZone);
 
 //City Route//
 router.post("/create-city", auth, cityController.createCity);
