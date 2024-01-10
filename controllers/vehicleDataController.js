@@ -271,6 +271,22 @@ exports.searchVehicle = catchError(async(req, res) =>{
   }
 });
 
+exports.search = catchError(async (req, res) => {
+  let data = [];
+
+  if (req.query.lastDigit) {
+    data = await VehicleData.find({ lastDigit: req.query.lastDigit });
+  } else if (req.query.agreementNo) {
+    data = [await VehicleData.findOne({ agreementNo: req.query.agreementNo })];
+  } else if (req.query.engineNo) {
+    data = [await VehicleData.findOne({ engineNo: req.query.engineNo })];
+  } else if (req.query.chasisNo) {
+    data = [await VehicleData.findOne({ chasisNo: req.query.chasisNo })];
+  }
+
+  return res.status(200).json({ data });
+});
+
 exports.getByRegNo = catchError(async(req, res) =>{
   const {regNo} = req.params;
   const data = await VehicleData.findOne({regNo:regNo});

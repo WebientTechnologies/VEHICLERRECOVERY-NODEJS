@@ -97,6 +97,7 @@ router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleContro
 router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo",  vehicleController.getByRegNo);
+router.get("/search-details", vehicleController.search);
 
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
