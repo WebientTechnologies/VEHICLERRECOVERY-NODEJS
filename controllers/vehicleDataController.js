@@ -491,34 +491,31 @@ function escapeRegex(text) {
 
 
 exports.getData = catchError(async(req, res) =>{
-  let data =[];
+  let data = [];
   let totalRecords = 0;
   const month = new RegExp(req.query.month, 'i');
-  const bank = new RegExp(req.query.bank, 'i');
-  const branch = new RegExp(req.query.branch, 'i');
-  if(req.query.month){
-    data = await VehicleData.find({month:month}).select('bankName branch callCenterNo1');
-     totalRecords = await VehicleData.countDocuments({ month: month });
+  const banks = req.query.bank ? req.query.bank.split(',') : [];
+  const branches = req.query.branch ? req.query.branch.split(',') : [];
+  const callCenterNos = req.query.callCenterNo ? req.query.callCenterNo.split(',') : [];
 
+  const query = {
+    month: month
+  };
+
+  // Add optional parameters to the query if provided
+  if (banks.length > 0) {
+    query.bankName = { $in: banks.map(bank => new RegExp(bank.trim(), 'i')) };
   }
 
-  if(req.query.month && req.query.bank){
-    data = await VehicleData.find({month:month, bankName:bank}).select('bankName branch callCenterNo1');
-     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank});
-
+  if (branches.length > 0) {
+    query.branch = { $in: branches.map(branch => new RegExp(branch.trim(), 'i')) };
   }
 
-  if(req.query.month && req.query.bank && req.query.branch){
-    data = await VehicleData.find({month:month, bankName:bank, branch:branch}).select('bankName branch callCenterNo1');
-     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank, branch:branch});
-
-  }  
-
-  if(req.query.month && req.query.bank && req.query.branch && req.query.callCenterNo){
-    data = await VehicleData.find({month:month, bankName:bank, branch:branch, callCenterNo1:req.query.callCenterNo}).select('bankName branch callCenterNo1');
-     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank, branch:branch,  callCenterNo1:req.query.callCenterNo});
-
+  if (callCenterNos.length > 0) {
+    query.callCenterNo1 = { $in: callCenterNos.map(callCenterNo => callCenterNo.trim()) };
   }
+  data = await VehicleData.find(query).select('bankName branch callCenterNo1');
+  totalRecords = await VehicleData.countDocuments(query);
   return res.status(200).json({ data, totalRecords });
 });
 
@@ -526,20 +523,25 @@ exports.getData = catchError(async(req, res) =>{
 exports.deleteData = catchError(async(req, res) =>{
   let query = {};
 
-  if (req.query.month) {
-    query.month = new RegExp(req.query.month, 'i');
+  const month = new RegExp(req.query.month, 'i');
+  const banks = req.query.bank ? req.query.bank.split(',') : [];
+  const branches = req.query.branch ? req.query.branch.split(',') : [];
+  const callCenterNos = req.query.callCenterNo ? req.query.callCenterNo.split(',') : [];
+
+   query.month = month;
+  
+
+  // Add optional parameters to the query if provided
+  if (banks.length > 0) {
+    query.bankName = { $in: banks.map(bank => new RegExp(bank.trim(), 'i')) };
   }
 
-  if (req.query.bank) {
-    query.bankName = new RegExp(req.query.bank, 'i');
+  if (branches.length > 0) {
+    query.branch = { $in: branches.map(branch => new RegExp(branch.trim(), 'i')) };
   }
 
-  if (req.query.branch) {
-    query.branch = new RegExp(req.query.branch, 'i');
-  }
-
-  if (req.query.callCenterNo) {
-    query.callCenterNo1 = req.query.callCenterNo ;
+  if (callCenterNos.length > 0) {
+    query.callCenterNo1 = { $in: callCenterNos.map(callCenterNo => callCenterNo.trim()) };
   }
 
   if (Object.keys(query).length === 0) {
