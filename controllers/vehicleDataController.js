@@ -488,3 +488,73 @@ exports.confirmationVehicleList = catchError(async(req, res) => {
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 }
+
+
+exports.getData = catchError(async(req, res) =>{
+  let data =[];
+  let totalRecords = 0;
+  const month = new RegExp(req.query.month, 'i');
+  const bank = new RegExp(req.query.bank, 'i');
+  const branch = new RegExp(req.query.branch, 'i');
+  if(req.query.month){
+    data = await VehicleData.find({month:month}).select('bankName branch callCenterNo1');
+     totalRecords = await VehicleData.countDocuments({ month: month });
+
+  }
+
+  if(req.query.month && req.query.bank){
+    data = await VehicleData.find({month:month, bankName:bank}).select('bankName branch callCenterNo1');
+     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank});
+
+  }
+
+  if(req.query.month && req.query.bank && req.query.branch){
+    data = await VehicleData.find({month:month, bankName:bank, branch:branch}).select('bankName branch callCenterNo1');
+     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank, branch:branch});
+
+  }  
+
+  if(req.query.month && req.query.bank && req.query.branch && req.query.callCenterNo){
+    data = await VehicleData.find({month:month, bankName:bank, branch:branch, callCenterNo1:req.query.callCenterNo}).select('bankName branch callCenterNo1');
+     totalRecords = await VehicleData.countDocuments({ month: month, bankName:bank, branch:branch,  callCenterNo1:req.query.callCenterNo});
+
+  }
+  return res.status(200).json({ data, totalRecords });
+});
+
+
+exports.deleteData = catchError(async(req, res) =>{
+  let query = {};
+
+  if (req.query.month) {
+    query.month = new RegExp(req.query.month, 'i');
+  }
+
+  if (req.query.bank) {
+    query.bankName = new RegExp(req.query.bank, 'i');
+  }
+
+  if (req.query.branch) {
+    query.branch = new RegExp(req.query.branch, 'i');
+  }
+
+  if (req.query.callCenterNo) {
+    query.callCenterNo1 = req.query.callCenterNo ;
+  }
+
+  if (Object.keys(query).length === 0) {
+    return res.status(400).json({ message: 'Invalid query parameters for deletion.' });
+  }
+
+  const result = await VehicleData.deleteMany(query);
+
+  return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
+
+});
+
+exports.deleteDataByFIleName = catchError(async(req, res) =>{
+  const fileName = new RegExp(req.params.fileName, 'i');
+  const result = await VehicleData.deleteMany({fileName:fileName});
+
+  return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
+})
