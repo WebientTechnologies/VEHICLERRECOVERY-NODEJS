@@ -158,59 +158,93 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
 });
 
 exports.getUploadedData = catchError(async (req, res) => {
-    const { fileName, month, count, createdAt, page = 1 } = req.query;
-  
-    const filterCriteria = {};
-    if (fileName) filterCriteria.fileName = fileName;
-    if (month) filterCriteria.month = month;
-    if (count) filterCriteria.count = parseInt(count);
-    if (createdAt) {
-        // Assuming createdAt is a string in the format "YYYY-MM-DD"
-        const startDate = new Date(createdAt);
-        const endDate = new Date(createdAt);
-        endDate.setDate(endDate.getDate() + 1); // Add one day to cover the entire day
-        filterCriteria.createdAt = { $gte: startDate, $lt: endDate };
-    }
-  
-    const aggregationPipeline = [
-      {
-        $match: filterCriteria,
-      },
-      {
-        $group: {
-          _id: {
-            fileName: "$fileName",
-            month: "$month",
-            createdAt: {
-              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-            },
+  const { search, page = 1, pageSize = 10 } = req.query;
+
+  const filterCriteria = {};
+ 
+
+  const searchRegex = new RegExp(search, 'i');
+  const searchFields = ['fileName', 'month', 'count', 'createdAt'];
+
+  if (search) {
+    filterCriteria.$or = searchFields.map(field => ({ [field]: searchRegex }));
+  }
+
+  const skip = (page - 1) * pageSize;
+
+  const aggregationPipeline = [
+    {
+      $match: filterCriteria,
+    },
+    {
+      $group: {
+        _id: {
+          fileName: "$fileName",
+          month: "$month",
+          createdAt: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
           },
-          count: { $sum: 1 },
-          status: { $first: "Success" },
         },
+        count: { $sum: 1 },
+        status: { $first: "Success" },
       },
-      {
-        $project: {
-          _id: 0,
-          fileName: "$_id.fileName",
-          month: "$_id.month",
-          createdAt: "$_id.createdAt",
-          count: 1,
-          status: "$status",
+    },
+    {
+      $project: {
+        _id: 0,
+        fileName: "$_id.fileName",
+        month: "$_id.month",
+        createdAt: "$_id.createdAt",
+        count: 1,
+        status: "$status",
+      },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: pageSize,
+    },
+  ];
+
+  const result = await VehicleData.aggregate(aggregationPipeline);
+
+  const totalRecords = await VehicleData.aggregate([
+    { $match: filterCriteria },
+    {
+      $group: {
+        _id: {
+          fileName: "$fileName",
+          month: "$month",
+          createdAt: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
         },
+        count: { $sum: 1 },
+        status: { $first: "Success" },
       },
-      {
-        $skip: (page - 1) * 10, 
+    },
+    {
+      $project: {
+        _id: 0,
+        fileName: "$_id.fileName",
+        month: "$_id.month",
+        createdAt: "$_id.createdAt",
+        count: 1,
+        status: "$status",
       },
-      {
-        $limit: 10, 
-      },
-    ];
-  
-    const result = await VehicleData.aggregate(aggregationPipeline);
-  
-    res.status(200).json({ data: result });
+    },
+  ]);
+
+  const totalPages = Math.ceil(totalRecords.length > pageSize ? totalRecords.length / pageSize : 1);
+
+  res.status(200).json({
+    data: result,
+    totalPages: totalPages,
+    currentPage: page,
+  });
 });
+
   
 exports.getVehicleStatusCounts = catchError(async (req, res) => {
  
