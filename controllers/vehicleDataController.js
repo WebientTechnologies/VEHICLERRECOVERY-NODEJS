@@ -311,11 +311,11 @@ exports.search = catchError(async (req, res) => {
   if (req.query.lastDigit) {
     data = await VehicleData.find({ lastDigit: req.query.lastDigit });
   } else if (req.query.agreementNo) {
-    data = [await VehicleData.find({ agreementNo: req.query.agreementNo })];
+    data = await VehicleData.find({ agreementNo: req.query.agreementNo });
   } else if (req.query.engineNo) {
-    data = [await VehicleData.find({ engineNo: req.query.engineNo })];
+    data = await VehicleData.find({ engineNo: req.query.engineNo });
   } else if (req.query.chasisNo) {
-    data = [await VehicleData.find({ chasisNo: req.query.chasisNo })];
+    data = await VehicleData.find({ chasisNo: req.query.chasisNo });
   }
 
   return res.status(200).json({ data });
