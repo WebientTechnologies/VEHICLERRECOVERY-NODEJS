@@ -593,4 +593,19 @@ exports.deleteDataByFIleName = catchError(async(req, res) =>{
   const result = await VehicleData.deleteMany({fileName:fileName});
 
   return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
+});
+
+exports.changeStatus = catchError(async(req, res) =>{
+  const {agreementNo} = req.params;
+  const {status} = req.body;
+  const details = await VehicleData.findOne({agreementNo:agreementNo});
+
+  if(!details){
+    return res.status(404).json({message:"Record Not Found"});
+  }
+
+  details.status = status;
+  const savedDetails = await details.save();
+
+  return res.status(200).json({data:savedDetails, message:"Status Changed Successfully!"});
 })

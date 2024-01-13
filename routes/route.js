@@ -11,6 +11,7 @@ const officeStafController =  require('../controllers/officeStafController');
 const repoAgentController = require('../controllers/repoAgentController');
 const idCardController = require('../controllers/idCardController');
 const vehicleController = require("../controllers/vehicleDataController");
+const requestController = require("../controllers/requestController");
 
 
 
@@ -21,6 +22,7 @@ const upload = multer({ storage: storage });
 
 const {auth, isAdmin,}  = require('../middlewares/Auth');
 const {officeStafAuth} = require('../middlewares/officeStafAuth');
+const {agentAuth} = require('../middlewares/agentAuth');
 const { imageSingleUpload , imageMultiUpload, imageBulkUpload} = require("../middlewares/multer");
 
 //=========================================================================================================//
@@ -101,7 +103,7 @@ router.get("/search-details", vehicleController.search);
 router.get("/details", auth, vehicleController.getData);
 router.delete("/delete-data", auth, vehicleController.deleteData);
 router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
-
+router.put("/change-vehicle-status/:agreementNo", auth, vehicleController.changeStatus);
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
 router.get("/hold-vehicle-list",  vehicleController.holdVehicleList);
@@ -130,7 +132,7 @@ router.put("/update-password", officeStafAuth, officeStafController.changePassor
 //Repo Agent//
 router.post("/create-repo-agent-by-staff", officeStafAuth, repoAgentController.createRepoAgent);
 router.put("/change-agent-status-by-staff/:id", officeStafAuth, repoAgentController.changeStatus);
-router.put("/change-agent-device-staff/:id", officeStafAuth, repoAgentController.changeDevice);
+router.put("/change-agent-device-by-staff/:id", officeStafAuth, repoAgentController.changeDevice);
 router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentController.changePassword);
 
 //Report//
@@ -142,6 +144,6 @@ router.get("/search-vehicle-list-by-staff", officeStafAuth, vehicleController.se
 
 router.post("/login-repo-agent", repoAgentController.login);
 
-
+router.put("/hold-request", agentAuth, requestController.requestToRepoVehicle );
 
 module.exports = router;
