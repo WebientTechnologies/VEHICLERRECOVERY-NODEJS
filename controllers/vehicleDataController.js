@@ -352,7 +352,7 @@ exports.allVehicleList = catchError(async (req, res) => {
     };
   }
 
-  const vehiclesList = await VehicleData.find().skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
 
   return res.status(200).json({
     vehiclesList,
@@ -385,7 +385,7 @@ exports.holdVehicleList = catchError(async(req, res) => {
       ],
     };
   }
-  const vehiclesList = await VehicleData.find({status:"hold"}).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -416,7 +416,7 @@ exports.repoVehicleList = catchError(async(req, res) => {
       ],
     };
   }
-  const vehiclesList = await VehicleData.find({status:"repo"}).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
