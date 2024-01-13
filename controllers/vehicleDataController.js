@@ -292,15 +292,15 @@ exports.searchVehicle = catchError(async(req, res) =>{
     return res.status(200).json({regNos});
   }
   if(req.query.agreementNo){
-    const data = await VehicleData.findOne({agreementNo:req.query.agreementNo});
+    const data = await VehicleData.find({agreementNo:req.query.agreementNo});
     return res.status(200).json({data});
   }
   if(req.query.engineNo){
-    const data = await VehicleData.findOne({engineNo:req.query.engineNo});
+    const data = await VehicleData.find({engineNo:req.query.engineNo});
     return res.status(200).json({data});
   }
   if(req.query.chasisNo){
-    const data = await VehicleData.findOne({chasisNo:req.query.chasisNo});
+    const data = await VehicleData.find({chasisNo:req.query.chasisNo});
     return res.status(200).json({data});
   }
 });
@@ -311,11 +311,11 @@ exports.search = catchError(async (req, res) => {
   if (req.query.lastDigit) {
     data = await VehicleData.find({ lastDigit: req.query.lastDigit });
   } else if (req.query.agreementNo) {
-    data = [await VehicleData.findOne({ agreementNo: req.query.agreementNo })];
+    data = [await VehicleData.find({ agreementNo: req.query.agreementNo })];
   } else if (req.query.engineNo) {
-    data = [await VehicleData.findOne({ engineNo: req.query.engineNo })];
+    data = [await VehicleData.find({ engineNo: req.query.engineNo })];
   } else if (req.query.chasisNo) {
-    data = [await VehicleData.findOne({ chasisNo: req.query.chasisNo })];
+    data = [await VehicleData.find({ chasisNo: req.query.chasisNo })];
   }
 
   return res.status(200).json({ data });
