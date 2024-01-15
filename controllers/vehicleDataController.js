@@ -357,7 +357,7 @@ exports.allVehicleList = catchError(async (req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -389,7 +389,7 @@ exports.holdVehicleList = catchError(async(req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -420,7 +420,7 @@ exports.repoVehicleList = catchError(async(req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -451,7 +451,7 @@ exports.releaseVehicleList = catchError(async(req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -482,7 +482,7 @@ exports.searchedVehicleList = catchError(async(req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -513,7 +513,7 @@ exports.confirmationVehicleList = catchError(async(req, res) => {
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
-    totalPages: Math.ceil(await VehicleData.countDocuments() / pageSize),
+    totalPages: Math.ceil(await VehicleData.countDocuments(query) / pageSize),
   });
 });
 
@@ -596,9 +596,9 @@ exports.deleteDataByFIleName = catchError(async(req, res) =>{
 });
 
 exports.changeStatus = catchError(async(req, res) =>{
-  const {agreementNo} = req.params;
+  const {id} = req.params;
   const {status} = req.body;
-  const details = await VehicleData.findOne({agreementNo:agreementNo});
+  const details = await VehicleData.findById(id);
 
   if(!details){
     return res.status(404).json({message:"Record Not Found"});
