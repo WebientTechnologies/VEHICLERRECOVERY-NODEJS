@@ -2,8 +2,12 @@
 const mongoose = require("mongoose");
 
 const requests = new mongoose.Schema(
-    {
-        
+    {  
+        recordId:{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'VehicleData',
+            required: false,
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             refPath: 'createdByType', 

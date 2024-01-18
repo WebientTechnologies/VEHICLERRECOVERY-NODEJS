@@ -138,12 +138,16 @@ router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentControll
 //Report//
 router.get("/search-vehicle-list-by-staff", officeStafAuth, vehicleController.searchedVehicleList);
 
+//Request//
+router.get("/request-for-staff", officeStafAuth, requestController.getRequests);
+router.put("/change-vehicle-status-by-staff/:id", officeStafAuth, vehicleController.changeStatus);
+
 
 //======================================================================================================//
                                 //****Repo Agent Routes****//
 
 router.post("/login-repo-agent", repoAgentController.login);
 
-router.put("/hold-request", agentAuth, requestController.requestToRepoVehicle );
+router.put("/hold-request/:id", agentAuth, requestController.requestToRepoVehicle );
 
 module.exports = router;
