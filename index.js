@@ -11,7 +11,8 @@ app.use(
         origin: [
             "http://localhost:3000",
             "https://vinayak-associates.vercel.app",
-            "http://127.0.0.1:3000"
+            "http://127.0.0.1:3000",
+            "http://13.200.166.86"
           ],
           credentials: true,
     })

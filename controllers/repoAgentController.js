@@ -1,5 +1,6 @@
 const RepoAgent = require('../models/repoAgent');
 const OfficeStaf = require('../models/officeStaf');
+const VehicleData = require("../models/vehiclesData"); 
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -349,3 +350,20 @@ exports.changePassord = catchError(async(req, res) =>{
     await agent.save();
     return res.status(200).json({ message: 'Password updated successfully' });
 });
+
+exports.agentDashboard = catchError(async (req, res) => {
+ 
+ 
+    const holdCount = await VehicleData.countDocuments({ status: "hold" });
+    
+    const repoCount = await VehicleData.countDocuments({ status: "repo" });
+    
+    const releaseCount = await VehicleData.countDocuments({ status: "release" });
+  
+  
+   return res.status(200).json({
+      holdCount: holdCount,
+      repoCount: repoCount,
+      releaseCount: releaseCount,
+    });
+  });
