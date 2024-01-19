@@ -332,7 +332,7 @@ exports.changePassord = catchError(async(req, res) =>{
     }
 
     // Verify the old password
-    const isPasswordValid = await bcrypt.compare(oldPassword, staff.password);
+    const isPasswordValid = await bcrypt.compare(oldPassword, agent.password);
 
     if (!isPasswordValid) {
     return res.status(401).json({ message: 'Incorrect old password' });
