@@ -1,4 +1,5 @@
 const OfficeStaf = require('../models/officeStaf');
+const RepoAgent = require('../models/repoAgent');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -43,6 +44,12 @@ exports.createOfficestaf = catchError(async (req, res) => {
         if(existingUsername){
             return res.status(409).json({message:"Username Is Already Taken! "});
         }
+        const existingRepoEmail = await RepoAgent.findOne({email:email});
+        const existingStaffEmail = await OfficeStaf.findOne({email:email});
+        if(existingRepoEmail || existingStaffEmail ){
+          return res.status(409).json({message:"Email Is Already Taken! "});
+        }
+
         const latestStaf = await OfficeStaf.findOne().sort({ stafId: -1 }).limit(1);
 
         let nextstafId;

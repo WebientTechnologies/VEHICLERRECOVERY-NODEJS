@@ -1,6 +1,7 @@
 
 const xlsx = require("xlsx");
 const VehicleData = require("../models/vehiclesData"); 
+const Request =  require("../models/request");
 const {catchError} = require('../middlewares/CatchError')
 
 exports.uploadFile = catchError(async (req, res) => {
@@ -604,8 +605,28 @@ exports.changeStatus = catchError(async(req, res) =>{
     return res.status(404).json({message:"Record Not Found"});
   }
 
+  const request = await Request.findOne({recordId:id});
+  if(request){
+    request.status = status;
+    await request.save();
+  }
   details.status = status;
   const savedDetails = await details.save();
 
   return res.status(200).json({data:savedDetails, message:"Status Changed Successfully!"});
+});
+
+exports.searchedVehicleStatus =  catchError(async(req, res) =>{
+  const userId = req.repoAgent._id ;
+  const type = 'RepoAgent' ;
+  const {id} = req.params;
+  const status = "search";
+  const vehicle = await VehicleData.findById({_id:id});
+  if(vehicle.status == "pending"){
+    vehicle.status = status; 
+    vehicle.seezerId = userId;
+    await vehicle.save();
+  }
+  return res.status(200).json({messege:"Message Sent Successfully!"});
 })
+

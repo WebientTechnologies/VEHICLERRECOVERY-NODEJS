@@ -12,6 +12,7 @@ const repoAgentController = require('../controllers/repoAgentController');
 const idCardController = require('../controllers/idCardController');
 const vehicleController = require("../controllers/vehicleDataController");
 const requestController = require("../controllers/requestController");
+const loginController = require("../controllers/loginController");
 
 
 
@@ -30,6 +31,10 @@ const { imageSingleUpload , imageMultiUpload, imageBulkUpload} = require("../mid
 router.get("/", (req, res) =>{
     res.send("Welcome to Vehicle Recovery Backend");
 });
+
+
+router.post("/login", loginController.login);
+
 
                                         //****Admin Routes ****//
 
@@ -149,5 +154,7 @@ router.put("/change-vehicle-status-by-staff/:id", officeStafAuth, vehicleControl
 router.post("/login-repo-agent", repoAgentController.login);
 
 router.put("/hold-request/:id", agentAuth, requestController.requestToRepoVehicle );
+router.put("/search-vehicle/:id", agentAuth, vehicleController.searchedVehicleStatus);
+router.put("/update-password-by-agent", agentAuth, repoAgentController.changePassord);
 
 module.exports = router;

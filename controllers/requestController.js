@@ -40,6 +40,7 @@ exports.requestToRepoVehicle = catchError(async(req, res) =>{
         maker :vehicle.maker,
         bucket :vehicle.bucket,
         emi :vehicle.emi,
+        status:status
     });
 
     const savedRequest = await newRequest.save();
@@ -51,7 +52,7 @@ exports.getRequests = catchError(async(req, res) =>{
     const page = parseInt(req.query.page) || 1; 
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
-    let query = { };
+    let query = {status:"hold"};
     if (req.query.search) {
       const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
       query = {

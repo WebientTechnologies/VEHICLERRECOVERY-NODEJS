@@ -1,4 +1,5 @@
 const RepoAgent = require('../models/repoAgent');
+const OfficeStaf = require('../models/officeStaf');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -30,6 +31,12 @@ exports.createRepoAgent = catchError(async (req, res) => {
         if(existingUsername){
             return res.status(409).json({message:"Username Is Already Taken! "});
         }
+        const existingRepoEmail = await RepoAgent.findOne({email:email});
+        const existingStaffEmail = await OfficeStaf.findOne({email:email});
+        if(existingRepoEmail || existingStaffEmail ){
+          return res.status(409).json({message:"Email Is Already Taken! "});
+        }
+
         const latestAgent = await RepoAgent.findOne().sort({ agentId: -1 }).limit(1);
 
         let nextagentId;
@@ -91,6 +98,12 @@ exports.registerRepoAgent = catchError(async (req, res) => {
       const existingUsername = await RepoAgent.findOne({username:username});
       if(existingUsername){
           return res.status(409).json({message:"Username Is Already Taken! "});
+      }
+
+      const existingRepoEmail = await RepoAgent.findOne({email:email});
+      const existingStaffEmail = await OfficeStaf.findOne({email:email});
+      if(existingRepoEmail || existingStaffEmail ){
+        return res.status(409).json({message:"Email Is Already Taken! "});
       }
       const latestAgent = await RepoAgent.findOne().sort({ agentId: -1 }).limit(1);
 
@@ -304,4 +317,35 @@ exports.getNewAgentId = catchError(async(req, res) =>{
         success: true,
         agentId: nextagentId,
     });
-})
+});
+
+exports.changePassord = catchError(async(req, res) =>{
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const authenticatedUser = req.repoAgent;
+  
+    const agentId = authenticatedUser._id; 
+  
+    const agent = await RepoAgent.findById(agentId);
+
+    if (!agent) {
+    return res.status(404).json({ message: 'Repo Agent not found' });
+    }
+
+    // Verify the old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, staff.password);
+
+    if (!isPasswordValid) {
+    return res.status(401).json({ message: 'Incorrect old password' });
+    }
+
+    if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    agent.password = hashedPassword;
+    agent.tokenVersion += 1;
+    await agent.save();
+    return res.status(200).json({ message: 'Password updated successfully' });
+});

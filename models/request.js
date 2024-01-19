@@ -77,6 +77,11 @@ const requests = new mongoose.Schema(
             type:String,
             required:false,
             maxLength:255,
+        },        
+        status: {
+            type:String,
+            enum:["hold", "repo", "release"],
+            required:false
         },
 
     },
