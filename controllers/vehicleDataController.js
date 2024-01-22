@@ -21,9 +21,9 @@ exports.uploadFile = catchError(async (req, res) => {
     const loadStatus = "Success";
     const batchSize = 100; // Set an appropriate batch size
     const recordsToInsert = [];
-    const latestRecord = await VehicleData.findOne({
-        month: month,
-      }).sort({ fileName: -1 });
+    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
+    .sort({ _id: -1 }) 
+    .exec();
   
       // Extract the suffix number from the latest fileName
       let fileNameSuffix = 1;
@@ -35,7 +35,7 @@ exports.uploadFile = catchError(async (req, res) => {
       // Process each row and create records in the database
     for (const row of data) {
       const fileName = `${month}${fileNameSuffix}.xlsx`;
-      const lastDigit = row.LastDigit || (row.Regdno ? row.Regdno.slice(-4) : '');
+      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
 
       const vehicleData = new VehicleData({
         bankName: row.Bankname,
@@ -50,6 +50,7 @@ exports.uploadFile = catchError(async (req, res) => {
         bucket: row.BUCKET,
         emi: row.EMI,
         color: row.COLOR,
+        maker: row.Maker,
         callCenterNo1: row.Callcenterno1,
         callCenterNo1Name: row.Callcenterno1name,
         callCenterNo1Email: row.Callcenterno1mailid,
@@ -100,9 +101,9 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
     const bank = req.body.bank; 
     const batchSize = 100; // Set an appropriate batch size
     const recordsToInsert = [];
-    const latestRecord = await VehicleData.findOne({
-        month: month,
-      }).sort({ fileName: -1 });
+    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
+    .sort({ _id: -1 }) 
+    .exec();
   
     const latestRecordByBank = await VehicleData.findOne({
       month: month,
@@ -133,7 +134,7 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
       
       let bankName = `${simplifiedBankName } ${month}${bankNameSuffix}`;
 
-      const lastDigit = row.LastDigit || (row.Regdno ? row.Regdno.slice(-4) : '');
+      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
       const vehicleData = new VehicleData({
         bankName: bankName,
         branch: row.Branch,
@@ -147,6 +148,7 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
         bucket: row.BUCKET,
         emi: row.EMI,
         color: row.COLOR,
+        maker: row.Maker,
         callCenterNo1: row.Callcenterno1,
         callCenterNo1Name: row.Callcenterno1name,
         callCenterNo1Email: row.Callcenterno1mailid,
