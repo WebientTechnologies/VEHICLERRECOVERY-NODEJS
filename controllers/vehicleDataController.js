@@ -19,6 +19,8 @@ exports.uploadFile = catchError(async (req, res) => {
     // Get the month from the request
     const month = req.body.month; 
     const loadStatus = "Success";
+    const batchSize = 100; // Set an appropriate batch size
+    const recordsToInsert = [];
     const latestRecord = await VehicleData.findOne({
         month: month,
       }).sort({ fileName: -1 });
@@ -65,8 +67,17 @@ exports.uploadFile = catchError(async (req, res) => {
         loaStatus: loadStatus,
         fileName: fileName,
       });
+      recordsToInsert.push(vehicleData);
+      if (recordsToInsert.length >= batchSize) {
+        await VehicleData.insertMany(recordsToInsert);
+        recordsToInsert.length = 0; // Clear the array
+      }
+      
+    }
 
-      await vehicleData.save();
+    // Insert any remaining records
+    if (recordsToInsert.length > 0) {
+      await VehicleData.insertMany(recordsToInsert);
     }
 
     res.status(200).json({ message: "File uploaded successfully" });
@@ -87,6 +98,8 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
 
     const month = req.body.month; 
     const bank = req.body.bank; 
+    const batchSize = 100; // Set an appropriate batch size
+    const recordsToInsert = [];
     const latestRecord = await VehicleData.findOne({
         month: month,
       }).sort({ fileName: -1 });
@@ -151,7 +164,17 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
         fileName: fileName,
       });
 
-      await vehicleData.save();
+      recordsToInsert.push(vehicleData);
+      if (recordsToInsert.length >= batchSize) {
+        await VehicleData.insertMany(recordsToInsert);
+        recordsToInsert.length = 0; // Clear the array
+      }
+      
+    }
+
+    // Insert any remaining records
+    if (recordsToInsert.length > 0) {
+      await VehicleData.insertMany(recordsToInsert);
     }
 
     res.status(200).json({ message: "File uploaded successfully" });
