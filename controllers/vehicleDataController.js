@@ -550,9 +550,10 @@ function escapeRegex(text) {
 }
 
 
-exports.getData = catchError(async(req, res) =>{
+exports.getData = catchError(async (req, res) => {
   let data = [];
   let totalRecords = 0;
+
   const month = new RegExp(req.query.month, 'i');
   const banks = req.query.bank ? req.query.bank.split(',') : [];
   const branches = req.query.branch ? req.query.branch.split(',') : [];
@@ -574,10 +575,35 @@ exports.getData = catchError(async(req, res) =>{
   if (callCenterNos.length > 0) {
     query.callCenterNo1 = { $in: callCenterNos.map(callCenterNo => callCenterNo.trim()) };
   }
-  data = await VehicleData.find(query).select('bankName branch callCenterNo1');
-  totalRecords = await VehicleData.countDocuments(query);
-  return res.status(200).json({ data, totalRecords });
+
+  try {
+    data = await VehicleData.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: { bankName: "$bankName", branch: "$branch", callCenterNo1: "$callCenterNo1" },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          bankName: "$_id.bankName",
+          branch: "$_id.branch",
+          callCenterNo1: "$_id.callCenterNo1",
+          count: 1
+        }
+      }
+    ]);
+    totalRecords = await VehicleData.countDocuments(query);
+
+    return res.status(200).json({ data, totalRecords });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 });
+
 
 
 exports.deleteData = catchError(async(req, res) =>{
