@@ -102,6 +102,7 @@ router.get("/cardId", auth, idCardController.getNewCardId);
 router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
+router.get("/get-all-data", vehicleController.getAllData);
 router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo",  vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);

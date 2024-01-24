@@ -1,193 +1,193 @@
 
 const xlsx = require("xlsx");
-const VehicleData = require("../models/vehiclesData"); 
-const Request =  require("../models/request");
-const {catchError} = require('../middlewares/CatchError')
+const VehicleData = require("../models/vehiclesData");
+const Request = require("../models/request");
+const { catchError } = require('../middlewares/CatchError')
 
 exports.uploadFile = catchError(async (req, res) => {
-  
-    // Check if the file is provided
-    if (!req.file) {
-      return res.status(400).json({ error: "No file provided" });
-    }
 
-    // Parse the Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet);
+  // Check if the file is provided
+  if (!req.file) {
+    return res.status(400).json({ error: "No file provided" });
+  }
 
-    // Get the month from the request
-    const month = req.body.month; 
-    const loadStatus = "Success";
-    const batchSize = 100; // Set an appropriate batch size
-    const recordsToInsert = [];
-    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
-    .sort({ _id: -1 }) 
+  // Parse the Excel file
+  const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet);
+
+  // Get the month from the request
+  const month = req.body.month;
+  const loadStatus = "Success";
+  const batchSize = 100; // Set an appropriate batch size
+  const recordsToInsert = [];
+  const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
+    .sort({ _id: -1 })
     .exec();
-  
-      // Extract the suffix number from the latest fileName
-      let fileNameSuffix = 1;
-      if (latestRecord && latestRecord.fileName) {
-        const match = latestRecord.fileName.match(/(\d+)/);
-        fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-      }
-  
-      // Process each row and create records in the database
-    for (const row of data) {
-      const fileName = `${month}${fileNameSuffix}.xlsx`;
-      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
 
-      const vehicleData = new VehicleData({
-        bankName: row.Bankname,
-        branch: row.Branch,
-        agreementNo: row.Agreementno,
-        customerName: row.Custname,
-        regNo: row.Regdno,
-        chasisNo: row.Chasisno,
-        engineNo: row.Engineno,
-        model: row.Model,
-        dlCode: row.Dlcode,
-        bucket: row.BUCKET,
-        emi: row.EMI,
-        color: row.COLOR,
-        maker: row.Maker,
-        callCenterNo1: row.Callcenterno1,
-        callCenterNo1Name: row.Callcenterno1name,
-        callCenterNo1Email: row.Callcenterno1mailid,
-        callCenterNo2: row.Callcenterno2,
-        callCenterNo2Name: row.Callcenterno2name,
-        callCenterNo2Email: row.Callcenterno2mailid,
-        callCenterNo3: row.Callcenterno3,
-        callCenterNo3Name: row.Callcenterno3name,
-        callCenterNo3Email: row.Callcenterno3mailid,
-        callCenterNo4: row.Callcenterno4,
-        callCenterNo4Name: row.Callcenterno4name,
-        callCenterNo4Email: row.Callcenterno4mailid,
-        lastDigit: lastDigit,
-        month: month,
-        loaStatus: loadStatus,
-        fileName: fileName,
-      });
-      recordsToInsert.push(vehicleData);
-      if (recordsToInsert.length >= batchSize) {
-        await VehicleData.insertMany(recordsToInsert);
-        recordsToInsert.length = 0; // Clear the array
-      }
-      
-    }
+  // Extract the suffix number from the latest fileName
+  let fileNameSuffix = 1;
+  if (latestRecord && latestRecord.fileName) {
+    const match = latestRecord.fileName.match(/(\d+)/);
+    fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+  }
 
-    // Insert any remaining records
-    if (recordsToInsert.length > 0) {
+  // Process each row and create records in the database
+  for (const row of data) {
+    const fileName = `${month}${fileNameSuffix}.xlsx`;
+    const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
+
+    const vehicleData = new VehicleData({
+      bankName: row.Bankname,
+      branch: row.Branch,
+      agreementNo: row.Agreementno,
+      customerName: row.Custname,
+      regNo: row.Regdno,
+      chasisNo: row.Chasisno,
+      engineNo: row.Engineno,
+      model: row.Model,
+      dlCode: row.Dlcode,
+      bucket: row.BUCKET,
+      emi: row.EMI,
+      color: row.COLOR,
+      maker: row.Maker,
+      callCenterNo1: row.Callcenterno1,
+      callCenterNo1Name: row.Callcenterno1name,
+      callCenterNo1Email: row.Callcenterno1mailid,
+      callCenterNo2: row.Callcenterno2,
+      callCenterNo2Name: row.Callcenterno2name,
+      callCenterNo2Email: row.Callcenterno2mailid,
+      callCenterNo3: row.Callcenterno3,
+      callCenterNo3Name: row.Callcenterno3name,
+      callCenterNo3Email: row.Callcenterno3mailid,
+      callCenterNo4: row.Callcenterno4,
+      callCenterNo4Name: row.Callcenterno4name,
+      callCenterNo4Email: row.Callcenterno4mailid,
+      lastDigit: lastDigit,
+      month: month,
+      loaStatus: loadStatus,
+      fileName: fileName,
+    });
+    recordsToInsert.push(vehicleData);
+    if (recordsToInsert.length >= batchSize) {
       await VehicleData.insertMany(recordsToInsert);
+      recordsToInsert.length = 0; // Clear the array
     }
 
-    res.status(200).json({ message: "File uploaded successfully" });
- 
+  }
+
+  // Insert any remaining records
+  if (recordsToInsert.length > 0) {
+    await VehicleData.insertMany(recordsToInsert);
+  }
+
+  res.status(200).json({ message: "File uploaded successfully" });
+
 });
 
 exports.uploadBankWiseData = catchError(async (req, res) => {
-  
-    // Check if the file is provided
-    if (!req.file) {
-      return res.status(400).json({ error: "No file provided" });
-    }
 
-    // Parse the Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet);
+  // Check if the file is provided
+  if (!req.file) {
+    return res.status(400).json({ error: "No file provided" });
+  }
 
-    const month = req.body.month; 
-    const bank = req.body.bank; 
-    const batchSize = 100; // Set an appropriate batch size
-    const recordsToInsert = [];
-    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
-    .sort({ _id: -1 }) 
+  // Parse the Excel file
+  const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet);
+
+  const month = req.body.month;
+  const bank = req.body.bank;
+  const batchSize = 100; // Set an appropriate batch size
+  const recordsToInsert = [];
+  const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
+    .sort({ _id: -1 })
     .exec();
-  
-    const latestRecordByBank = await VehicleData.findOne({
+
+  const latestRecordByBank = await VehicleData.findOne({
+    month: month,
+  }).sort({ bankName: -1 });
+
+
+  let fileNameSuffix = 1;
+  if (latestRecord && latestRecord.fileName) {
+    const match = latestRecord.fileName.match(/(\d+)/);
+    fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+  }
+  let bankNameSuffix = 1;
+  const simplifiedBankName = bank.split(' ')[0];
+  if (latestRecordByBank && latestRecordByBank.bankName) {
+    const trimmedBankName = latestRecordByBank.bankName.slice(0, -1);
+    const reqBankName = `${simplifiedBankName} ${month}`;
+    if (trimmedBankName == reqBankName) {
+      const match = latestRecordByBank.bankName.match(/(\d+)$/);
+      bankNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+    } else {
+      bankNameSuffix = 1;
+    }
+  }
+
+  for (const row of data) {
+    const fileName = `${month}${fileNameSuffix}.xlsx`;
+
+
+    let bankName = `${simplifiedBankName} ${month}${bankNameSuffix}`;
+
+    const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
+    const vehicleData = new VehicleData({
+      bankName: bankName,
+      branch: row.Branch,
+      agreementNo: row.Agreementno,
+      customerName: row.Custname,
+      regNo: row.Regdno,
+      chasisNo: row.Chasisno,
+      engineNo: row.Engineno,
+      model: row.Model,
+      dlCode: row.Dlcode,
+      bucket: row.BUCKET,
+      emi: row.EMI,
+      color: row.COLOR,
+      maker: row.Maker,
+      callCenterNo1: row.Callcenterno1,
+      callCenterNo1Name: row.Callcenterno1name,
+      callCenterNo1Email: row.Callcenterno1mailid,
+      callCenterNo2: row.Callcenterno2,
+      callCenterNo2Name: row.Callcenterno2name,
+      callCenterNo2Email: row.Callcenterno2mailid,
+      callCenterNo3: row.Callcenterno3,
+      callCenterNo3Name: row.Callcenterno3name,
+      callCenterNo3Email: row.Callcenterno3mailid,
+      callCenterNo4: row.Callcenterno4,
+      callCenterNo4Name: row.Callcenterno4name,
+      callCenterNo4Email: row.Callcenterno4mailid,
+      lastDigit: lastDigit,
       month: month,
-    }).sort({ bankName: -1 });
+      fileName: fileName,
+    });
 
-  
-    let fileNameSuffix = 1;
-    if (latestRecord && latestRecord.fileName) {
-      const match = latestRecord.fileName.match(/(\d+)/);
-      fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-    }
-    let bankNameSuffix = 1;
-    const simplifiedBankName = bank.split(' ')[0];
-    if (latestRecordByBank && latestRecordByBank.bankName) {
-      const trimmedBankName = latestRecordByBank.bankName.slice(0, -1);
-      const reqBankName = `${simplifiedBankName } ${month}`;
-      if(trimmedBankName == reqBankName ){
-        const match = latestRecordByBank.bankName.match(/(\d+)$/);
-        bankNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-      }else{
-        bankNameSuffix = 1;
-      }
-    }
-   
-    for (const row of data) {
-      const fileName = `${month}${fileNameSuffix}.xlsx`;
-
-      
-      let bankName = `${simplifiedBankName } ${month}${bankNameSuffix}`;
-
-      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
-      const vehicleData = new VehicleData({
-        bankName: bankName,
-        branch: row.Branch,
-        agreementNo: row.Agreementno,
-        customerName: row.Custname,
-        regNo: row.Regdno,
-        chasisNo: row.Chasisno,
-        engineNo: row.Engineno,
-        model: row.Model,
-        dlCode: row.Dlcode,
-        bucket: row.BUCKET,
-        emi: row.EMI,
-        color: row.COLOR,
-        maker: row.Maker,
-        callCenterNo1: row.Callcenterno1,
-        callCenterNo1Name: row.Callcenterno1name,
-        callCenterNo1Email: row.Callcenterno1mailid,
-        callCenterNo2: row.Callcenterno2,
-        callCenterNo2Name: row.Callcenterno2name,
-        callCenterNo2Email: row.Callcenterno2mailid,
-        callCenterNo3: row.Callcenterno3,
-        callCenterNo3Name: row.Callcenterno3name,
-        callCenterNo3Email: row.Callcenterno3mailid,
-        callCenterNo4: row.Callcenterno4,
-        callCenterNo4Name: row.Callcenterno4name,
-        callCenterNo4Email: row.Callcenterno4mailid,
-        lastDigit: lastDigit,
-        month: month,
-        fileName: fileName,
-      });
-
-      recordsToInsert.push(vehicleData);
-      if (recordsToInsert.length >= batchSize) {
-        await VehicleData.insertMany(recordsToInsert);
-        recordsToInsert.length = 0; // Clear the array
-      }
-      
-    }
-
-    // Insert any remaining records
-    if (recordsToInsert.length > 0) {
+    recordsToInsert.push(vehicleData);
+    if (recordsToInsert.length >= batchSize) {
       await VehicleData.insertMany(recordsToInsert);
+      recordsToInsert.length = 0; // Clear the array
     }
 
-    res.status(200).json({ message: "File uploaded successfully" });
- 
+  }
+
+  // Insert any remaining records
+  if (recordsToInsert.length > 0) {
+    await VehicleData.insertMany(recordsToInsert);
+  }
+
+  res.status(200).json({ message: "File uploaded successfully" });
+
 });
 
 exports.getUploadedData = catchError(async (req, res) => {
   const { search, page = 1, pageSize = 10 } = req.query;
 
   const filterCriteria = {};
- 
+
 
   const searchRegex = new RegExp(search, 'i');
   const searchFields = ['fileName', 'month', 'count', 'createdAt'];
@@ -271,35 +271,35 @@ exports.getUploadedData = catchError(async (req, res) => {
   });
 });
 
-  
+
 exports.getVehicleStatusCounts = catchError(async (req, res) => {
- 
-    const totalCount = await VehicleData.countDocuments();
-    
-    const holdCount = await VehicleData.countDocuments({ status: "hold" });
-    
-    const repoCount = await VehicleData.countDocuments({ status: "repo" });
-    
-    const releaseCount = await VehicleData.countDocuments({ status: "release" });
 
-    const confirmationCount = await VehicleData.countDocuments({ status: "pending" });
+  const totalCount = await VehicleData.countDocuments();
 
-    res.status(200).json({
-      totalCount: totalCount,
-      holdCount: holdCount,
-      repoCount: repoCount,
-      releaseCount: releaseCount,
-      confirmationCount: confirmationCount,
-    });
+  const holdCount = await VehicleData.countDocuments({ status: "hold" });
+
+  const repoCount = await VehicleData.countDocuments({ status: "repo" });
+
+  const releaseCount = await VehicleData.countDocuments({ status: "release" });
+
+  const confirmationCount = await VehicleData.countDocuments({ status: "pending" });
+
+  res.status(200).json({
+    totalCount: totalCount,
+    holdCount: holdCount,
+    repoCount: repoCount,
+    releaseCount: releaseCount,
+    confirmationCount: confirmationCount,
+  });
 });
 
 exports.staffDashboard = catchError(async (req, res) => {
- 
- 
+
+
   const holdCount = await VehicleData.countDocuments({ status: "hold" });
-  
+
   const repoCount = await VehicleData.countDocuments({ status: "repo" });
-  
+
   const releaseCount = await VehicleData.countDocuments({ status: "release" });
   const searchCount = await VehicleData.countDocuments({ status: "search" });
 
@@ -312,22 +312,22 @@ exports.staffDashboard = catchError(async (req, res) => {
   });
 });
 
-exports.searchVehicle = catchError(async(req, res) =>{
-  if(req.query.lastDigit){
-    const regNos = await VehicleData.find({lastDigit:req.query.lastDigit}).select('regNo').exec();
-    return res.status(200).json({regNos});
+exports.searchVehicle = catchError(async (req, res) => {
+  if (req.query.lastDigit) {
+    const regNos = await VehicleData.find({ lastDigit: req.query.lastDigit }).select('regNo').exec();
+    return res.status(200).json({ regNos });
   }
-  if(req.query.agreementNo){
-    const data = await VehicleData.find({agreementNo:req.query.agreementNo});
-    return res.status(200).json({data});
+  if (req.query.agreementNo) {
+    const data = await VehicleData.find({ agreementNo: req.query.agreementNo });
+    return res.status(200).json({ data });
   }
-  if(req.query.engineNo){
-    const data = await VehicleData.find({engineNo:req.query.engineNo});
-    return res.status(200).json({data});
+  if (req.query.engineNo) {
+    const data = await VehicleData.find({ engineNo: req.query.engineNo });
+    return res.status(200).json({ data });
   }
-  if(req.query.chasisNo){
-    const data = await VehicleData.find({chasisNo:req.query.chasisNo});
-    return res.status(200).json({data});
+  if (req.query.chasisNo) {
+    const data = await VehicleData.find({ chasisNo: req.query.chasisNo });
+    return res.status(200).json({ data });
   }
 });
 
@@ -347,18 +347,18 @@ exports.search = catchError(async (req, res) => {
   return res.status(200).json({ data });
 });
 
-exports.getByRegNo = catchError(async(req, res) =>{
-  const {regNo} = req.params;
-  const data = await VehicleData.findOne({regNo:regNo});
-  return res.status(200).json({data});
+exports.getByRegNo = catchError(async (req, res) => {
+  const { regNo } = req.params;
+  const data = await VehicleData.findOne({ regNo: regNo });
+  return res.status(200).json({ data });
 });
 
 exports.allVehicleList = catchError(async (req, res) => {
-  const page = parseInt(req.query.page) || 1; 
-  const pageSize = 10; 
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = 10;
 
   const skip = (page - 1) * pageSize;
-  let query = {  };
+  let query = {};
   if (req.query.search) {
     const searchRegex = new RegExp(escapeRegex(req.query.search), 'gi');
     query = {
@@ -366,19 +366,19 @@ exports.allVehicleList = catchError(async (req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
 
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
 
   return res.status(200).json({
     vehiclesList,
@@ -388,8 +388,8 @@ exports.allVehicleList = catchError(async (req, res) => {
 });
 
 
-exports.holdVehicleList = catchError(async(req, res) => {
-  const page = parseInt(req.query.page) || 1; 
+exports.holdVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
   let query = { status: "hold" };
@@ -400,18 +400,18 @@ exports.holdVehicleList = catchError(async(req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -419,8 +419,8 @@ exports.holdVehicleList = catchError(async(req, res) => {
   });
 });
 
-exports.repoVehicleList = catchError(async(req, res) => {
-  const page = parseInt(req.query.page) || 1; 
+exports.repoVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
   let query = { status: "repo" };
@@ -431,18 +431,18 @@ exports.repoVehicleList = catchError(async(req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -450,8 +450,8 @@ exports.repoVehicleList = catchError(async(req, res) => {
   });
 });
 
-exports.releaseVehicleList = catchError(async(req, res) => {
-  const page = parseInt(req.query.page) || 1; 
+exports.releaseVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
   let query = { status: "release" };
@@ -462,18 +462,18 @@ exports.releaseVehicleList = catchError(async(req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -481,8 +481,8 @@ exports.releaseVehicleList = catchError(async(req, res) => {
   });
 });
 
-exports.searchedVehicleList = catchError(async(req, res) => {
-  const page = parseInt(req.query.page) || 1; 
+exports.searchedVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
   let query = { status: "search" };
@@ -493,18 +493,18 @@ exports.searchedVehicleList = catchError(async(req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -512,8 +512,8 @@ exports.searchedVehicleList = catchError(async(req, res) => {
   });
 });
 
-exports.confirmationVehicleList = catchError(async(req, res) => {
-  const page = parseInt(req.query.page) || 1; 
+exports.confirmationVehicleList = catchError(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;
   let query = { status: "pending" };
@@ -524,18 +524,18 @@ exports.confirmationVehicleList = catchError(async(req, res) => {
       $or: [
         { bankName: searchRegex },
         { branch: searchRegex },
-        {agreementNo: searchRegex},
-        {customerName: searchRegex},
-        {regNo: searchRegex},
-        {chasisNo: searchRegex},
-        {engineNo: searchRegex},
-        {model: searchRegex},
-        {dlCode: searchRegex},   
+        { agreementNo: searchRegex },
+        { customerName: searchRegex },
+        { regNo: searchRegex },
+        { chasisNo: searchRegex },
+        { engineNo: searchRegex },
+        { model: searchRegex },
+        { dlCode: searchRegex },
         { 'seezerId.name': searchRegex },
       ],
     };
   }
-  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId','name').exec();
+  const vehiclesList = await VehicleData.find(query).skip(skip).limit(pageSize).populate('seezerId', 'name').exec();
   return res.status(200).json({
     vehiclesList,
     currentPage: page,
@@ -606,7 +606,7 @@ exports.getData = catchError(async (req, res) => {
 
 
 
-exports.deleteData = catchError(async(req, res) =>{
+exports.deleteData = catchError(async (req, res) => {
   let query = {};
 
   const month = new RegExp(req.query.month, 'i');
@@ -614,8 +614,8 @@ exports.deleteData = catchError(async(req, res) =>{
   const branches = req.query.branch ? req.query.branch.split(',') : [];
   const callCenterNos = req.query.callCenterNo ? req.query.callCenterNo.split(',') : [];
 
-   query.month = month;
-  
+  query.month = month;
+
 
   // Add optional parameters to the query if provided
   if (banks.length > 0) {
@@ -640,44 +640,79 @@ exports.deleteData = catchError(async(req, res) =>{
 
 });
 
-exports.deleteDataByFIleName = catchError(async(req, res) =>{
+exports.deleteDataByFIleName = catchError(async (req, res) => {
   const fileName = new RegExp(req.params.fileName, 'i');
-  const result = await VehicleData.deleteMany({fileName:fileName});
+  const result = await VehicleData.deleteMany({ fileName: fileName });
 
   return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
 });
 
-exports.changeStatus = catchError(async(req, res) =>{
-  const {id} = req.params;
-  const {status} = req.body;
+exports.changeStatus = catchError(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
   const details = await VehicleData.findById(id);
 
-  if(!details){
-    return res.status(404).json({message:"Record Not Found"});
+  if (!details) {
+    return res.status(404).json({ message: "Record Not Found" });
   }
 
-  const request = await Request.findOne({recordId:id});
-  if(request){
+  const request = await Request.findOne({ recordId: id });
+  if (request) {
     request.status = status;
     await request.save();
   }
   details.status = status;
   const savedDetails = await details.save();
 
-  return res.status(200).json({data:savedDetails, message:"Status Changed Successfully!"});
+  return res.status(200).json({ data: savedDetails, message: "Status Changed Successfully!" });
 });
 
-exports.searchedVehicleStatus =  catchError(async(req, res) =>{
-  const userId = req.repoAgent._id ;
-  const type = 'RepoAgent' ;
-  const {id} = req.params;
+exports.searchedVehicleStatus = catchError(async (req, res) => {
+  const userId = req.repoAgent._id;
+  const type = 'RepoAgent';
+  const { id } = req.params;
   const status = "search";
-  const vehicle = await VehicleData.findById({_id:id});
-  if(vehicle.status == "pending"){
-    vehicle.status = status; 
+  const vehicle = await VehicleData.findById({ _id: id });
+  if (vehicle.status == "pending") {
+    vehicle.status = status;
     vehicle.seezerId = userId;
     await vehicle.save();
   }
-  return res.status(200).json({messege:"Message Sent Successfully!"});
+  return res.status(200).json({ messege: "Message Sent Successfully!" });
 })
 
+
+exports.getAllData = catchError(async (req, res) => {
+  let data = [];
+  let totalRecords = 0;
+
+  let query = {};
+
+  const dateParam = req.query.date ? new Date(req.query.date) : null; // Use Date object for exact match
+
+  if (dateParam)
+    query.createdAt = { $gte: dateParam, $lt: new Date(dateParam.getTime() + 24 * 60 * 60 * 1000) };
+
+  // Pagination parameters
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10; // Default limit to 10 if not provided
+  const skip = (page - 1) * limit;
+
+  // Query data with pagination
+  data = await VehicleData.find(query).skip(skip).limit(limit);
+  totalRecords = await VehicleData.countDocuments(query);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalRecords / limit);
+
+  // Determine if there is a next page
+  const nextPage = page < totalPages ? page + 1 : null;
+
+  return res.status(200).json({
+    data,
+    totalRecords,
+    totalPages,
+    currentPage: page,
+    nextPage,
+  });
+});
