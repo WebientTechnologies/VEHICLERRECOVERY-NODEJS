@@ -11,18 +11,18 @@ const { catchError } = require("../middlewares/CatchError");
 exports.login = async (req,res) => {
     try {
 
-      const {email, password, deviceId} = req.body;
-      if(!email || !password) {
+      const {username, password, deviceId} = req.body;
+      if(!username || !password) {
           return res.status(400).json({
               success:false,
               message:'PLease fill all the details carefully',
           });
       }
 
-      let staf = await OfficeStaf.findOne({email});
+      let staf = await OfficeStaf.findOne({username});
         if(!staf) {
 
-            let agent = await RepoAgent.findOne({email});
+            let agent = await RepoAgent.findOne({username});
             if(!agent) {
                 return res.status(401).json({
                     success:false,
@@ -31,7 +31,7 @@ exports.login = async (req,res) => {
             }
             if (agent.deviceId === deviceId || !agent.deviceId) {
                 const payload = {
-                    email:agent.email,
+                    username:agent.username,
                     _id:agent._id,
                     tokenVersion:agent.tokenVersion,
                 };
@@ -80,7 +80,7 @@ exports.login = async (req,res) => {
       else{
         if (staf.deviceId === deviceId || !staf.deviceId) {
             const payload = {
-                email:staf.email,
+                username:staf.username,
                 _id:staf._id,
                 tokenVersion:staf.tokenVersion,
             };
