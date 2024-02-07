@@ -41,12 +41,12 @@ const vehiclesdata = new mongoose.Schema(
         model: {
             type:String,
             required:false,
-            maxLength:255,
+            maxLength:5000,
         },
         maker: {
             type:String,
             required:false,
-            maxLength:255,
+            maxLength:5000,
         },
         dlCode: {
             type:String,
