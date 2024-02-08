@@ -223,6 +223,27 @@ const vehiclesdata = new mongoose.Schema(
             required:false,
             maxLength:255,
         },
+        holdAt: {
+            type:Date,
+            required:false,
+            maxLength:255,
+        },
+        releaseAt: {
+            type:Date,
+            required:false,
+            maxLength:255,
+        },
+        searchedAt: {
+            type:Date,
+            required:false,
+            maxLength:255,
+        },
+        repoAt: {
+            type:Date,
+            required:false,
+            maxLength:255,
+        },
+
 
     },
     { timestamps: true,}
