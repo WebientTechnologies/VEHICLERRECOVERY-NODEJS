@@ -120,6 +120,7 @@ router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVeh
 
 //Dashboard Route//
 router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
+router.get("/hold-graph", vehicleController.holdDataGraph);
 
 //================================================================================================//
 
