@@ -651,7 +651,11 @@ exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-  const dateTime = new Date(indianDate);
+  const dateTime = new Date(indianDate);  
+  dateTime.setHours(dateTime.getHours() + 5);
+  dateTime.setMinutes(dateTime.getMinutes() + 30);
+
+  const utcDateTime = dateTime.toISOString();
   const details = await VehicleData.findById(id);
 
   if (!details) {
@@ -666,11 +670,11 @@ exports.changeStatus = catchError(async (req, res) => {
   details.status = status;
 
   if (status === "hold") {
-    details.holdAt = dateTime;
+    details.holdAt = utcDateTime;
   } else if (status === "release") {
-    details.releaseAt = dateTime;
+    details.releaseAt = utcDateTime;
   }else if (status === "repo") {
-    details.releaseAt = dateTime;
+    details.releaseAt = utcDateTime;
   }
 
   const savedDetails = await details.save();
@@ -683,11 +687,17 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
   const type = 'RepoAgent';
   const { id } = req.params;
   const status = "search";
+  const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+  const dateTime = new Date(indianDate);  
+  dateTime.setHours(dateTime.getHours() + 5);
+  dateTime.setMinutes(dateTime.getMinutes() + 30);
+
+  const utcDateTime = dateTime.toISOString();
   const vehicle = await VehicleData.findById({ _id: id });
   if (vehicle.status == "pending") {
     vehicle.status = status;
     vehicle.seezerId = userId;
-    vehicle.searchedAt = new Date();
+    vehicle.searchedAt = utcDateTime;
     await vehicle.save();
   }
   return res.status(200).json({ messege: "Message Sent Successfully!" });
@@ -795,7 +805,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
               ':00',
             ],
           },
-          totalHoldVehicle: '$count',
+          totalVehicle: '$count',
         },
       },
     ];
@@ -854,7 +864,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
               default: 'Unknown',
             },
           },
-          totalHoldVehicle: '$count',
+          totalVehicle: '$count',
         },
       },
       {
@@ -863,7 +873,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
           data: {
             $push: {
               day: '$day',
-              totalHoldVehicle: '$totalHoldVehicle',
+              totalVehicle: '$totalVehicle',
             },
           },
         },
@@ -879,7 +889,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
                 $cond: {
                   if: { $in: ['$$day', '$data.day'] },
                   then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
-                  else: { day: '$$day', totalHoldVehicle: 0 },
+                  else: { day: '$$day', totalVehicle: 0 },
                 },
               },
             },
@@ -898,152 +908,94 @@ exports.holdDataGraph = catchError(async (req, res) =>{
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
     const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     aggregationPipeline = [
-      {
-        $match: {
-          status: 'hold',
-          holdAt: {
-            $gte: currentMonthStart,
-            $lt: nextMonthStart,
-          },
+    {
+      $match: {
+        status: 'hold',
+        holdAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
         },
       },
-      {
-        $group: {
-          _id: {
-            dayOfMonth: { $dayOfMonth: '$holdAt' },
-          },
-          count: { $sum: 1 },
-        },
+    },
+    {
+      $group: {
+        _id: { dayOfMonth: { $dayOfMonth: '$holdAt' } },
+        totalVehicle: { $sum: 1 },
       },
-      {
-        $project: {
-          _id: 0,
-          date: {
-            $toString: '$_id.dayOfMonth',
-          },
-          totalHoldVehicle: '$count',
-        },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: { $toString: '$_id.dayOfMonth' },
+        totalVehicle: '$totalVehicle',
       },
-      {
-        $group: {
-          _id: null,
-          data: {
-            $push: {
-              date: '$date',
-              totalHoldVehicle: '$totalHoldVehicle',
-            },
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          data: {
-            $map: {
-              input: daysArray,
-              as: 'day',
-              in: {
-                date: { $toString: '$$day' },
-                totalHoldVehicle: {
-                  $cond: {
-                    if: { $in: ['$$day', '$data.date'] },
-                    then: {
-                      $arrayElemAt: [
-                        '$data',
-                        {
-                          $indexOfArray: ['$data.date', { $toString: '$$day' }],
-                        },
-                      ],
-                    },
-                    else: 0,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      {
-        $unwind: '$data',
-      },
-      {
-        $replaceRoot: { newRoot: '$data' },
-      },
-    ];
+    },
+    {
+      $sort: { date: 1 },
+    },
+  ];
   } 
   else if (interval === 'year') {
     const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
     const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
 
-    // Create an array representing all months of the year
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     aggregationPipeline = [
-      {
-        $group: {
-          _id: { month: { $month: '$holdAt' } },
-          count: { $sum: 1 },
+    {
+      $match: {
+        status: 'hold',
+        holdAt: {
+          $gte: new Date(new Date().getFullYear(), 0, 1),
+          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
         },
       },
-      {
-        $project: {
-          _id: 0,
-          month: '$_id.month',
-          totalHoldVehicle: '$count',
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$holdAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        month: '$_id.month',
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+      },
+    },
+    {
+      $unwind: '$data',
+    },
+    {
+      $project: {
+        month: '$data.month',
+        totalVehicle: {
+          $mergeObjects: [
+            { month: '$data.month', totalVehicle: 0 },
+            '$data',
+          ],
         },
       },
-      {
-        $group: {
-          _id: null,
-          data: {
-            $push: {
-              month: '$month',
-              totalHoldVehicle: '$totalHoldVehicle',
-            },
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          data: {
-            $map: {
-              input: monthsArray,
-              as: 'month',
-              in: {
-                month: { $toInt: '$$month' },
-                totalHoldVehicle: {
-                  $ifNull: [
-                    {
-                      $first: {
-                        $filter: {
-                          input: '$data',
-                          as: 'item',
-                          cond: { $eq: ['$$item.month', { $toInt: '$$month' }] },
-                        },
-                      },
-                    },
-                    0,
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
-      {
-        $unwind: '$data',
-      },
-      {
-        $replaceRoot: { newRoot: '$data' },
-      },
-      {
-        $sort: { month: 1 },
-      },
-    ];
+    },
+    {
+      $replaceRoot: { newRoot: '$totalVehicle' },
+    },
+    {
+      $sort: { month: 1 },
+    },
+  ];
+
+
   } 
   else {
     return res.status(400).json({ error: 'Invalid interval specified' });
@@ -1052,4 +1004,801 @@ exports.holdDataGraph = catchError(async (req, res) =>{
   const result = await VehicleData.aggregate(aggregationPipeline);
 
   res.json({ data: result });
-})
+});
+
+
+exports.repoDataGraph = catchError(async (req, res) =>{
+  const { interval } = req.query;
+  const indianTimeZoneOffset = 330; 
+  let aggregationPipeline = [];
+
+  if (interval === 'day') {
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'repo',
+          $expr: {
+            $eq: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $toDate: {
+                      $subtract: [
+                        { $toDate: { $substr: ['$repoAt', 0, 24] } },
+                        { $multiply: [60000, indianTimeZoneOffset] }, // Convert to IST
+                      ],
+                    },
+                  },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [60000, indianTimeZoneOffset] }, // Convert to IST
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            hour: {
+              $hour: {
+                $dateFromString: {
+                  dateString: { $substr: ['$repoAt', 0, 24] },
+                },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          time: {
+            $concat: [
+              { $toString: '$_id.hour' },
+              ':00 To ',
+              { $toString: { $add: ['$_id.hour', 1] } },
+              ':00',
+            ],
+          },
+          totalVehicle: '$count',
+        },
+      },
+    ];
+  } 
+  else if (interval === 'week') {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'repo',
+          $expr: {
+            $gte: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: { $toDate: { $substr: ['$repoAt', 0, 24] } },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [1000, 60, 60, 24, { $dayOfWeek: new Date() }] },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            dayOfWeek: {
+              $dayOfWeek: {
+                $toDate: { $substr: ['$repoAt', 0, 24] },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          day: {
+            $switch: {
+              branches: daysOfWeek.map((day, index) => ({
+                case: { $eq: ['$_id.dayOfWeek', index + 1] },
+                then: day,
+              })),
+              default: 'Unknown',
+            },
+          },
+          totalVehicle: '$count',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: {
+            $push: {
+              day: '$day',
+              totalVehicle: '$totalVehicle',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          data: {
+            $map: {
+              input: daysOfWeek,
+              as: 'day',
+              in: {
+                $cond: {
+                  if: { $in: ['$$day', '$data.day'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
+                  else: { day: '$$day', totalVehicle: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $replaceRoot: { newRoot: '$data' },
+      },
+    ];
+  } 
+  else if (interval === 'month') {
+    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'repo',
+        repoAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { dayOfMonth: { $dayOfMonth: '$repoAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: { $toString: '$_id.dayOfMonth' },
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $sort: { date: 1 },
+    },
+  ];
+  } 
+  else if (interval === 'year') {
+    const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
+    const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
+    const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'repo',
+        repoAt: {
+          $gte: new Date(new Date().getFullYear(), 0, 1),
+          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$repoAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        month: '$_id.month',
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+      },
+    },
+    {
+      $unwind: '$data',
+    },
+    {
+      $project: {
+        month: '$data.month',
+        totalVehicle: {
+          $mergeObjects: [
+            { month: '$data.month', totalVehicle: 0 },
+            '$data',
+          ],
+        },
+      },
+    },
+    {
+      $replaceRoot: { newRoot: '$totalVehicle' },
+    },
+    {
+      $sort: { month: 1 },
+    },
+  ];
+
+
+  } 
+  else {
+    return res.status(400).json({ error: 'Invalid interval specified' });
+  }
+
+  const result = await VehicleData.aggregate(aggregationPipeline);
+
+  res.json({ data: result });
+});
+
+exports.releaseDataGraph = catchError(async (req, res) =>{
+  const { interval } = req.query;
+  const indianTimeZoneOffset = 330; 
+  let aggregationPipeline = [];
+
+  if (interval === 'day') {
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'release',
+          $expr: {
+            $eq: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $toDate: {
+                      $subtract: [
+                        { $toDate: { $substr: ['$releaseAt', 0, 24] } },
+                        { $multiply: [60000, indianTimeZoneOffset] }, // Convert to IST
+                      ],
+                    },
+                  },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [60000, indianTimeZoneOffset] }, // Convert to IST
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            hour: {
+              $hour: {
+                $dateFromString: {
+                  dateString: { $substr: ['$releaseAt', 0, 24] },
+                },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          time: {
+            $concat: [
+              { $toString: '$_id.hour' },
+              ':00 To ',
+              { $toString: { $add: ['$_id.hour', 1] } },
+              ':00',
+            ],
+          },
+          totalVehicle: '$count',
+        },
+      },
+    ];
+  } 
+  else if (interval === 'week') {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'release',
+          $expr: {
+            $gte: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: { $toDate: { $substr: ['$releaseAt', 0, 24] } },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [1000, 60, 60, 24, { $dayOfWeek: new Date() }] },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            dayOfWeek: {
+              $dayOfWeek: {
+                $toDate: { $substr: ['$releaseAt', 0, 24] },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          day: {
+            $switch: {
+              branches: daysOfWeek.map((day, index) => ({
+                case: { $eq: ['$_id.dayOfWeek', index + 1] },
+                then: day,
+              })),
+              default: 'Unknown',
+            },
+          },
+          totalVehicle: '$count',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: {
+            $push: {
+              day: '$day',
+              totalVehicle: '$totalVehicle',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          data: {
+            $map: {
+              input: daysOfWeek,
+              as: 'day',
+              in: {
+                $cond: {
+                  if: { $in: ['$$day', '$data.day'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
+                  else: { day: '$$day', totalVehicle: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $replaceRoot: { newRoot: '$data' },
+      },
+    ];
+  } 
+  else if (interval === 'month') {
+    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'release',
+        releaseAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { dayOfMonth: { $dayOfMonth: '$releaseAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: { $toString: '$_id.dayOfMonth' },
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $sort: { date: 1 },
+    },
+  ];
+  } 
+  else if (interval === 'year') {
+    const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
+    const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
+    const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'release',
+        releaseAt: {
+          $gte: new Date(new Date().getFullYear(), 0, 1),
+          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$releaseAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        month: '$_id.month',
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+      },
+    },
+    {
+      $unwind: '$data',
+    },
+    {
+      $project: {
+        month: '$data.month',
+        totalVehicle: {
+          $mergeObjects: [
+            { month: '$data.month', totalVehicle: 0 },
+            '$data',
+          ],
+        },
+      },
+    },
+    {
+      $replaceRoot: { newRoot: '$totalVehicle' },
+    },
+    {
+      $sort: { month: 1 },
+    },
+  ];
+
+
+  } 
+  else {
+    return res.status(400).json({ error: 'Invalid interval specified' });
+  }
+
+  const result = await VehicleData.aggregate(aggregationPipeline);
+
+  res.json({ data: result });
+});
+
+exports.searchDataGraph = catchError(async (req, res) =>{
+  const { interval } = req.query;
+  const indianTimeZoneOffset = 330; 
+  let aggregationPipeline = [];
+
+  if (interval === 'day') {
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'search',
+          $expr: {
+            $eq: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $toDate: {
+                      $subtract: [
+                        { $toDate: { $substr: ['$searchedAt', 0, 24] } },
+                        { $multiply: [60000, indianTimeZoneOffset] }, 
+                      ],
+                    },
+                  },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [60000, indianTimeZoneOffset] }, 
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            hour: {
+              $hour: {
+                $dateFromString: {
+                  dateString: { $substr: ['$searchedAt', 0, 24] },
+                },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          time: {
+            $concat: [
+              { $toString: '$_id.hour' },
+              ':00 To ',
+              { $toString: { $add: ['$_id.hour', 1] } },
+              ':00',
+            ],
+          },
+          totalVehicle: '$count',
+        },
+      },
+    ];
+  } 
+  else if (interval === 'week') {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    aggregationPipeline = [
+      {
+        $match: {
+          status: 'search',
+          $expr: {
+            $gte: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: { $toDate: { $substr: ['$searchedAt', 0, 24] } },
+                },
+              },
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: {
+                    $subtract: [
+                      new Date(),
+                      { $multiply: [1000, 60, 60, 24, { $dayOfWeek: new Date() }] },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            dayOfWeek: {
+              $dayOfWeek: {
+                $toDate: { $substr: ['$searchedAt', 0, 24] },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          day: {
+            $switch: {
+              branches: daysOfWeek.map((day, index) => ({
+                case: { $eq: ['$_id.dayOfWeek', index + 1] },
+                then: day,
+              })),
+              default: 'Unknown',
+            },
+          },
+          totalVehicle: '$count',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: {
+            $push: {
+              day: '$day',
+              totalVehicle: '$totalVehicle',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          data: {
+            $map: {
+              input: daysOfWeek,
+              as: 'day',
+              in: {
+                $cond: {
+                  if: { $in: ['$$day', '$data.day'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
+                  else: { day: '$$day', totalVehicle: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $replaceRoot: { newRoot: '$data' },
+      },
+    ];
+  } 
+  else if (interval === 'month') {
+    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'search',
+        searchedAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { dayOfMonth: { $dayOfMonth: '$searchedAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: { $toString: '$_id.dayOfMonth' },
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $sort: { date: 1 },
+    },
+  ];
+  } 
+  else if (interval === 'year') {
+    const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
+    const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
+    const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    aggregationPipeline = [
+    {
+      $match: {
+        status: 'search',
+        searchedAt: {
+          $gte: new Date(new Date().getFullYear(), 0, 1),
+          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$searchedAt' } },
+        totalVehicle: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        month: '$_id.month',
+        totalVehicle: '$totalVehicle',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+      },
+    },
+    {
+      $unwind: '$data',
+    },
+    {
+      $project: {
+        month: '$data.month',
+        totalVehicle: {
+          $mergeObjects: [
+            { month: '$data.month', totalVehicle: 0 },
+            '$data',
+          ],
+        },
+      },
+    },
+    {
+      $replaceRoot: { newRoot: '$totalVehicle' },
+    },
+    {
+      $sort: { month: 1 },
+    },
+  ];
+
+
+  } 
+  else {
+    return res.status(400).json({ error: 'Invalid interval specified' });
+  }
+
+  const result = await VehicleData.aggregate(aggregationPipeline);
+
+  res.json({ data: result });
+});
+
