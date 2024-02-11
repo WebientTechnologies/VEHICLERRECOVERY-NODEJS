@@ -340,8 +340,12 @@ exports.search = catchError(async (req, res) => {
     data = await VehicleData.find({ agreementNo: req.query.agreementNo });
   } else if (req.query.engineNo) {
     data = await VehicleData.find({ engineNo: req.query.engineNo });
-  } else if (req.query.chasisNo) {
-    data = await VehicleData.find({ chasisNo: req.query.chasisNo });
+  }  else if (req.query.chasisNo) {
+    if (req.query.chasisNo.length < 6) {
+      return res.status(400).json({ error: 'Invalid chasisNo length' });
+    }
+    const last6Digits = req.query.chasisNo.slice(-6);
+    data = await VehicleData.find({ chasisNo: { $regex: `${last6Digits}` } });
   }
 
   return res.status(200).json({ data });
@@ -649,7 +653,7 @@ exports.deleteDataByFIleName = catchError(async (req, res) => {
 
 exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, seezerId } = req.body;
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const dateTime = new Date(indianDate);  
   dateTime.setHours(dateTime.getHours() + 5);
@@ -671,6 +675,7 @@ exports.changeStatus = catchError(async (req, res) => {
 
   if (status === "hold") {
     details.holdAt = utcDateTime;
+    seezerId = seezerId;
   } else if (status === "release") {
     details.releaseAt = utcDateTime;
   }else if (status === "repo") {
