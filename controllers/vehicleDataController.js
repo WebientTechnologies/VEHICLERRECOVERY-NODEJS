@@ -653,7 +653,7 @@ exports.deleteDataByFIleName = catchError(async (req, res) => {
 
 exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
-  const { status, seezerId } = req.body;
+  const { status, seezerId, loadStatus, loadItem } = req.body;
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const dateTime = new Date(indianDate);  
   dateTime.setHours(dateTime.getHours() + 5);
@@ -675,7 +675,9 @@ exports.changeStatus = catchError(async (req, res) => {
 
   if (status === "hold") {
     details.holdAt = utcDateTime;
-    seezerId = seezerId;
+    details.seezerId = seezerId;
+    details.loadStatus = loadStatus;
+    details.loadItem = loadItem;
   } else if (status === "release") {
     details.releaseAt = utcDateTime;
   }else if (status === "repo") {
@@ -802,7 +804,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          time: {
+          range: {
             $concat: [
               { $toString: '$_id.hour' },
               ':00 To ',
@@ -860,11 +862,11 @@ exports.holdDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          day: {
+          range: {
             $switch: {
-              branches: daysOfWeek.map((day, index) => ({
+              branches: daysOfWeek.map((range, index) => ({
                 case: { $eq: ['$_id.dayOfWeek', index + 1] },
-                then: day,
+                then: range,
               })),
               default: 'Unknown',
             },
@@ -877,7 +879,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
           _id: null,
           data: {
             $push: {
-              day: '$day',
+              range: '$range',
               totalVehicle: '$totalVehicle',
             },
           },
@@ -889,12 +891,12 @@ exports.holdDataGraph = catchError(async (req, res) =>{
           data: {
             $map: {
               input: daysOfWeek,
-              as: 'day',
+              as: 'range',
               in: {
                 $cond: {
-                  if: { $in: ['$$day', '$data.day'] },
-                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
-                  else: { day: '$$day', totalVehicle: 0 },
+                  if: { $in: ['$$range', '$data.range'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.range', '$$range'] }] },
+                  else: { range: '$$range', totalVehicle: 0 },
                 },
               },
             },
@@ -934,12 +936,12 @@ exports.holdDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        date: { $toString: '$_id.dayOfMonth' },
+        range: { $toString: '$_id.dayOfMonth' },
         totalVehicle: '$totalVehicle',
       },
     },
     {
-      $sort: { date: 1 },
+      $sort: { range: 1 },
     },
   ];
   } 
@@ -950,54 +952,54 @@ exports.holdDataGraph = catchError(async (req, res) =>{
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'hold',
-        holdAt: {
-          $gte: new Date(new Date().getFullYear(), 0, 1),
-          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
-        },
+      {
+          $match: {
+              status: 'hold',
+              holdAt: {
+                  $gte: new Date(new Date().getFullYear(), 0, 1),
+                  $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+              },
+          },
       },
-    },
-    {
-      $group: {
-        _id: { month: { $month: '$holdAt' } },
-        totalVehicle: { $sum: 1 },
+      {
+          $group: {
+              _id: { month: { $month: '$holdAt' } },
+              totalVehicle: { $sum: 1 },
+          },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        month: '$_id.month',
-        totalVehicle: '$totalVehicle',
+      {
+          $project: {
+              _id: 0,
+              range: { $toString: '$_id.month' },
+              totalVehicle: '$totalVehicle',
+          },
       },
-    },
-    {
-      $group: {
-        _id: null,
-        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+      {
+          $group: {
+              _id: null,
+              data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
+          },
       },
-    },
-    {
-      $unwind: '$data',
-    },
-    {
-      $project: {
-        month: '$data.month',
-        totalVehicle: {
-          $mergeObjects: [
-            { month: '$data.month', totalVehicle: 0 },
-            '$data',
-          ],
-        },
+      {
+          $unwind: '$data',
       },
-    },
-    {
-      $replaceRoot: { newRoot: '$totalVehicle' },
-    },
-    {
-      $sort: { month: 1 },
-    },
+      {
+          $project: {
+              range: '$data.range',
+              totalVehicle: {
+                  $mergeObjects: [
+                      { range: '$data.range', totalVehicle: 0 },
+                      '$data',
+                  ],
+              },
+          },
+      },
+      {
+          $replaceRoot: { newRoot: '$totalVehicle' },
+      },
+      {
+          $sort: { range: 1 },
+      },
   ];
 
 
@@ -1069,7 +1071,7 @@ exports.repoDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          time: {
+          range: {
             $concat: [
               { $toString: '$_id.hour' },
               ':00 To ',
@@ -1127,11 +1129,11 @@ exports.repoDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          day: {
+          range: {
             $switch: {
-              branches: daysOfWeek.map((day, index) => ({
+              branches: daysOfWeek.map((range, index) => ({
                 case: { $eq: ['$_id.dayOfWeek', index + 1] },
-                then: day,
+                then: range,
               })),
               default: 'Unknown',
             },
@@ -1144,7 +1146,7 @@ exports.repoDataGraph = catchError(async (req, res) =>{
           _id: null,
           data: {
             $push: {
-              day: '$day',
+              range: '$range',
               totalVehicle: '$totalVehicle',
             },
           },
@@ -1156,12 +1158,12 @@ exports.repoDataGraph = catchError(async (req, res) =>{
           data: {
             $map: {
               input: daysOfWeek,
-              as: 'day',
+              as: 'range',
               in: {
                 $cond: {
-                  if: { $in: ['$$day', '$data.day'] },
-                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
-                  else: { day: '$$day', totalVehicle: 0 },
+                  if: { $in: ['$$range', '$data.range'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.range', '$$range'] }] },
+                  else: { range: '$$range', totalVehicle: 0 },
                 },
               },
             },
@@ -1201,12 +1203,12 @@ exports.repoDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        date: { $toString: '$_id.dayOfMonth' },
+        range: { $toString: '$_id.dayOfMonth' },
         totalVehicle: '$totalVehicle',
       },
     },
     {
-      $sort: { date: 1 },
+      $sort: { range: 1 },
     },
   ];
   } 
@@ -1234,14 +1236,14 @@ exports.repoDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        month: '$_id.month',
+        range: '$_id.month',
         totalVehicle: '$totalVehicle',
       },
     },
     {
       $group: {
         _id: null,
-        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
       },
     },
     {
@@ -1249,10 +1251,10 @@ exports.repoDataGraph = catchError(async (req, res) =>{
     },
     {
       $project: {
-        month: '$data.month',
+        range: '$data.range',
         totalVehicle: {
           $mergeObjects: [
-            { month: '$data.month', totalVehicle: 0 },
+            { range: '$data.range', totalVehicle: 0 },
             '$data',
           ],
         },
@@ -1262,7 +1264,7 @@ exports.repoDataGraph = catchError(async (req, res) =>{
       $replaceRoot: { newRoot: '$totalVehicle' },
     },
     {
-      $sort: { month: 1 },
+      $sort: { range: 1 },
     },
   ];
 
@@ -1334,7 +1336,7 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          time: {
+          range: {
             $concat: [
               { $toString: '$_id.hour' },
               ':00 To ',
@@ -1392,11 +1394,11 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          day: {
+          range: {
             $switch: {
-              branches: daysOfWeek.map((day, index) => ({
+              branches: daysOfWeek.map((range, index) => ({
                 case: { $eq: ['$_id.dayOfWeek', index + 1] },
-                then: day,
+                then: range,
               })),
               default: 'Unknown',
             },
@@ -1409,7 +1411,7 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
           _id: null,
           data: {
             $push: {
-              day: '$day',
+              range: '$range',
               totalVehicle: '$totalVehicle',
             },
           },
@@ -1421,12 +1423,12 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
           data: {
             $map: {
               input: daysOfWeek,
-              as: 'day',
+              as: 'range',
               in: {
                 $cond: {
-                  if: { $in: ['$$day', '$data.day'] },
-                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
-                  else: { day: '$$day', totalVehicle: 0 },
+                  if: { $in: ['$$range', '$data.range'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.range', '$$range'] }] },
+                  else: { range: '$$range', totalVehicle: 0 },
                 },
               },
             },
@@ -1466,12 +1468,12 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        date: { $toString: '$_id.dayOfMonth' },
+        range: { $toString: '$_id.dayOfMonth' },
         totalVehicle: '$totalVehicle',
       },
     },
     {
-      $sort: { date: 1 },
+      $sort: { range: 1 },
     },
   ];
   } 
@@ -1499,14 +1501,14 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        month: '$_id.month',
+        range: '$_id.month',
         totalVehicle: '$totalVehicle',
       },
     },
     {
       $group: {
         _id: null,
-        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
       },
     },
     {
@@ -1514,10 +1516,10 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
     },
     {
       $project: {
-        month: '$data.month',
+        range: '$data.range',
         totalVehicle: {
           $mergeObjects: [
-            { month: '$data.month', totalVehicle: 0 },
+            { range: '$data.range', totalVehicle: 0 },
             '$data',
           ],
         },
@@ -1527,7 +1529,7 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
       $replaceRoot: { newRoot: '$totalVehicle' },
     },
     {
-      $sort: { month: 1 },
+      $sort: { range: 1 },
     },
   ];
 
@@ -1599,7 +1601,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          time: {
+          range: {
             $concat: [
               { $toString: '$_id.hour' },
               ':00 To ',
@@ -1657,11 +1659,11 @@ exports.searchDataGraph = catchError(async (req, res) =>{
       {
         $project: {
           _id: 0,
-          day: {
+          range: {
             $switch: {
-              branches: daysOfWeek.map((day, index) => ({
+              branches: daysOfWeek.map((range, index) => ({
                 case: { $eq: ['$_id.dayOfWeek', index + 1] },
-                then: day,
+                then: range,
               })),
               default: 'Unknown',
             },
@@ -1674,7 +1676,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
           _id: null,
           data: {
             $push: {
-              day: '$day',
+              range: '$range',
               totalVehicle: '$totalVehicle',
             },
           },
@@ -1686,12 +1688,12 @@ exports.searchDataGraph = catchError(async (req, res) =>{
           data: {
             $map: {
               input: daysOfWeek,
-              as: 'day',
+              as: 'range',
               in: {
                 $cond: {
-                  if: { $in: ['$$day', '$data.day'] },
-                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.day', '$$day'] }] },
-                  else: { day: '$$day', totalVehicle: 0 },
+                  if: { $in: ['$$range', '$data.range'] },
+                  then: { $arrayElemAt: ['$data', { $indexOfArray: ['$data.range', '$$range'] }] },
+                  else: { range: '$$range', totalVehicle: 0 },
                 },
               },
             },
@@ -1731,12 +1733,12 @@ exports.searchDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        date: { $toString: '$_id.dayOfMonth' },
+        range: { $toString: '$_id.dayOfMonth' },
         totalVehicle: '$totalVehicle',
       },
     },
     {
-      $sort: { date: 1 },
+      $sort: { range: 1 },
     },
   ];
   } 
@@ -1764,14 +1766,14 @@ exports.searchDataGraph = catchError(async (req, res) =>{
     {
       $project: {
         _id: 0,
-        month: '$_id.month',
+        range: '$_id.month',
         totalVehicle: '$totalVehicle',
       },
     },
     {
       $group: {
         _id: null,
-        data: { $push: { month: '$month', totalVehicle: '$totalVehicle' } },
+        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
       },
     },
     {
@@ -1779,10 +1781,10 @@ exports.searchDataGraph = catchError(async (req, res) =>{
     },
     {
       $project: {
-        month: '$data.month',
+        range: '$data.range',
         totalVehicle: {
           $mergeObjects: [
-            { month: '$data.month', totalVehicle: 0 },
+            { range: '$data.range', totalVehicle: 0 },
             '$data',
           ],
         },
@@ -1792,7 +1794,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
       $replaceRoot: { newRoot: '$totalVehicle' },
     },
     {
-      $sort: { month: 1 },
+      $sort: { range: 1 },
     },
   ];
 
