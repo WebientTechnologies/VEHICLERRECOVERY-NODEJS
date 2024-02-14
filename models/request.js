@@ -83,6 +83,16 @@ const requests = new mongoose.Schema(
             enum:["hold", "repo", "release"],
             required:false
         },
+        loadStatus: {
+            type:String,
+            enum:["empty", "goods", " "],
+            default:" "
+        },
+        loadItem: {
+            type:String,
+            required:false,
+            maxLength:255,
+        },
 
     },
     { timestamps: true,}
