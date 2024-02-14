@@ -160,7 +160,7 @@ router.put("/change-vehicle-status-by-staff/:id", officeStafAuth, vehicleControl
 
 router.post("/login-repo-agent", repoAgentController.login);
 
-router.put("/hold-request/:id", agentAuth, requestController.requestToRepoVehicle );
+router.put("/hold-request", agentAuth, requestController.requestToRepoVehicle );
 router.put("/search-vehicle/:id", agentAuth, vehicleController.searchedVehicleStatus);
 router.put("/update-password-by-agent", agentAuth, repoAgentController.changePassord);
 router.get("/agent-dashboard", agentAuth, repoAgentController.agentDashboard);

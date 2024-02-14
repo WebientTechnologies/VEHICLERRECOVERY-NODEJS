@@ -21,7 +21,7 @@ exports.requestToRepoVehicle = catchError(async(req, res) =>{
     const userId = req.repoAgent._id ;
     const type = 'RepoAgent' ;
     const message = "Request To Hold Vehicle";
-    const {id} = req.params;
+    const {id,loadStatus, loadItem } = req.body;
     const status = "hold";
     const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
     const dateTime = new Date(indianDate);  
@@ -29,7 +29,7 @@ exports.requestToRepoVehicle = catchError(async(req, res) =>{
     dateTime.setMinutes(dateTime.getMinutes() + 30);
   
     const utcDateTime = dateTime.toISOString();
-    const vehicle = await VehicleData.findByIdAndUpdate({_id:id}, {status:status, seezerId:userId, holdAt:utcDateTime}, {new:true});
+    const vehicle = await VehicleData.findByIdAndUpdate({_id:id}, {status:status, seezerId:userId, holdAt:utcDateTime, loadStatus:loadStatus, loadItem:loadItem}, {new:true});
     const newRequest = new Request({
         recordId: vehicle._id,
         createdBy : userId,
@@ -46,7 +46,9 @@ exports.requestToRepoVehicle = catchError(async(req, res) =>{
         maker :vehicle.maker,
         bucket :vehicle.bucket,
         emi :vehicle.emi,
-        status:status
+        status:status,
+        loadStatus:loadStatus,
+        loadItem:loadItem
     });
 
     const savedRequest = await newRequest.save();
