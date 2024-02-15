@@ -353,7 +353,7 @@ exports.changePassord = catchError(async(req, res) =>{
 
 exports.agentDashboard = catchError(async (req, res) => {
  
- 
+    const totalCount = await VehicleData.countDocuments();
     const holdCount = await VehicleData.countDocuments({ status: "hold" });
     
     const repoCount = await VehicleData.countDocuments({ status: "repo" });
@@ -362,6 +362,7 @@ exports.agentDashboard = catchError(async (req, res) => {
   
   
    return res.status(200).json({
+      totalOnlineData: totalCount,
       holdCount: holdCount,
       repoCount: repoCount,
       releaseCount: releaseCount,
