@@ -654,7 +654,7 @@ exports.deleteDataByFIleName = catchError(async (req, res) => {
 
 exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
-  const { status, seezerId, loadStatus, loadItem } = req.body;
+  const { status, seezerId, loadStatus, loadItem, latitude, longitude } = req.body;
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const dateTime = new Date(indianDate);  
   dateTime.setHours(dateTime.getHours() + 5);
@@ -679,6 +679,8 @@ exports.changeStatus = catchError(async (req, res) => {
     details.seezerId = seezerId;
     details.loadStatus = loadStatus;
     details.loadItem = loadItem;
+    details.latitude = latitude;
+    details.longitude = longitude;
   } else if (status === "release") {
     details.releaseAt = utcDateTime;
   }else if (status === "repo") {
@@ -694,6 +696,7 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
   const userId = req.repoAgent._id;
   const type = 'RepoAgent';
   const { id } = req.params;
+  const {latitude, longitude} = req.body;
   const status = "search";
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const dateTime = new Date(indianDate);  
@@ -706,6 +709,8 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
     vehicle.status = status;
     vehicle.seezerId = userId;
     vehicle.searchedAt = utcDateTime;
+    vehicle.latitude = latitude;
+    vehicle.longitude = longitude;
     await vehicle.save();
   }
   return res.status(200).json({ messege: "Message Sent Successfully!" });
