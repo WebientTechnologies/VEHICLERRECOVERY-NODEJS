@@ -321,7 +321,7 @@ exports.getNewAgentId = catchError(async(req, res) =>{
 });
 
 exports.changePassord = catchError(async(req, res) =>{
-    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const { newPassword, confirmPassword } = req.body;
     const authenticatedUser = req.repoAgent;
   
     const agentId = authenticatedUser._id; 
@@ -332,13 +332,7 @@ exports.changePassord = catchError(async(req, res) =>{
     return res.status(404).json({ message: 'Repo Agent not found' });
     }
 
-    // Verify the old password
-    const isPasswordValid = await bcrypt.compare(oldPassword, agent.password);
-
-    if (!isPasswordValid) {
-    return res.status(401).json({ message: 'Incorrect old password' });
-    }
-
+   
     if (newPassword !== confirmPassword) {
     return res.status(400).json({ message: 'Passwords do not match' });
     }

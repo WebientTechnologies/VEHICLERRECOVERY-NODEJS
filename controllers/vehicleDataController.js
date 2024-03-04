@@ -340,17 +340,17 @@ exports.search = catchError(async (req, res) => {
   let data = [];
 
   if (req.query.lastDigit) {
-    data = await VehicleData.find({ lastDigit: req.query.lastDigit });
+    data = await VehicleData.find({ lastDigit: req.query.lastDigit }).sort({ regNo: 1 }).exec();;
   } else if (req.query.agreementNo) {
-    data = await VehicleData.find({ agreementNo: req.query.agreementNo });
+    data = await VehicleData.find({ agreementNo: req.query.agreementNo }).sort({ regNo: 1 }).exec();;
   } else if (req.query.engineNo) {
-    data = await VehicleData.find({ engineNo: req.query.engineNo });
+    data = await VehicleData.find({ engineNo: req.query.engineNo }).sort({ regNo: 1 }).exec();;
   }  else if (req.query.chasisNo) {
     if (req.query.chasisNo.length < 6) {
-      return res.status(400).json({ error: 'Invalid chasisNo length' });
+      return res.status(400).json({ error: 'Invalid chasisNo length' }).sort({ regNo: 1 }).exec();;
     }
     const last6Digits = req.query.chasisNo.slice(-6);
-    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') } });
+    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') } }).sort({ regNo: 1 }).exec();;
   }
 
   return res.status(200).json({ data });

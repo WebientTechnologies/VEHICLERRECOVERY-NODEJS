@@ -190,7 +190,7 @@ exports.getLastStaffId = catchError(async(req, res) =>{
 });
 
 exports.changePassord = catchError(async(req, res) =>{
-    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const {  newPassword, confirmPassword } = req.body;
     const authenticatedUser = req.officeStaf;
   
     const stafId = authenticatedUser._id; 
@@ -199,13 +199,6 @@ exports.changePassord = catchError(async(req, res) =>{
 
     if (!staff) {
     return res.status(404).json({ message: 'Office Staff not found' });
-    }
-
-    // Verify the old password
-    const isPasswordValid = await bcrypt.compare(oldPassword, staff.password);
-
-    if (!isPasswordValid) {
-    return res.status(401).json({ message: 'Incorrect old password' });
     }
 
     if (newPassword !== confirmPassword) {
