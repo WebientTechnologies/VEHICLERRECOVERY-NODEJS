@@ -2,7 +2,11 @@
 const xlsx = require("xlsx");
 const VehicleData = require("../models/vehiclesData");
 const Request = require("../models/request");
-const { catchError } = require('../middlewares/CatchError')
+const { catchError } = require('../middlewares/CatchError');
+const fs = require('fs');
+const mongoosePaginate = require('mongoose-aggregate-paginate-v2');
+const { exec } = require('child_process');
+const archiver = require('archiver');
 
 exports.uploadFile = catchError(async (req, res) => {
 
@@ -1815,3 +1819,55 @@ exports.searchDataGraph = catchError(async (req, res) =>{
   res.json({ data: result });
 });
 
+exports.exportsData = catchError(async (req, res) => {
+  const jsonFilename = 'vehicledata.json';
+  const zipFilename = 'vehicledata.zip';
+
+  // Set response headers for file download
+  res.setHeader('Content-Disposition', `attachment; filename=${zipFilename}`);
+  res.setHeader('Content-Type', 'application/zip');
+
+  // Use mongoexport to export the data to a JSON file
+  const exportCommand = `sudo mongoexport --uri="mongodb+srv://rrsoftwaresolutionbhojawas:nHBFw23VvuM7mgTj@vinayak.j4sbfuz.mongodb.net/vehicle-recovery?retryWrites=true&w=majority" --collection=vehicledatas --out=/var/www/${jsonFilename}`;
+
+  exec(exportCommand, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error during export: ${stderr}`);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+
+    // Create a zip file containing the exported JSON file
+    const outputZip = fs.createWriteStream(`/var/www/${zipFilename}`);
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Set compression level
+    });
+
+    outputZip.on('close', () => {
+      // Send the zip file as a download
+      res.download(`/var/www/${zipFilename}`, zipFilename, (downloadError) => {
+        if (downloadError) {
+          console.error(`Error during download: ${downloadError}`);
+          res.status(500).send('Internal Server Error');
+        }
+
+        // Cleanup: delete the exported JSON and zip files after download
+        fs.unlink(`/var/www/${jsonFilename}`, (cleanupJsonError) => {
+          if (cleanupJsonError) {
+            console.error(`Error during JSON file cleanup: ${cleanupJsonError}`);
+          }
+
+          fs.unlink(`/var/www/${zipFilename}`, (cleanupZipError) => {
+            if (cleanupZipError) {
+              console.error(`Error during zip file cleanup: ${cleanupZipError}`);
+            }
+          });
+        });
+      });
+    });
+
+    archive.pipe(outputZip);
+    archive.file(`/var/www/${jsonFilename}`, { name: jsonFilename });
+    archive.finalize();
+  });
+});

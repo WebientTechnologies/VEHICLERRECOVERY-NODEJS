@@ -110,6 +110,7 @@ router.get("/details", auth, vehicleController.getData);
 router.delete("/delete-data", auth, vehicleController.deleteData);
 router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
 router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
+router.get("/export-data", vehicleController.exportsData);
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
 router.get("/hold-vehicle-list",  vehicleController.holdVehicleList);
