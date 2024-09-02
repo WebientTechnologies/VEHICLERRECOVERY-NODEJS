@@ -9,17 +9,17 @@ const repoagents = new mongoose.Schema(
             maxLength:255,
         },
         zoneId:{
-            type: mongoose.Schema.Types.ObjectId,
+            type: String,
             ref: 'Zone',
             required: false,
         },
         stateId:{
-            type: mongoose.Schema.Types.ObjectId,
+            type: String,
             ref: 'State',
             required: false,
         },
         cityId:{
-            type: mongoose.Schema.Types.ObjectId,
+            type: String,
             ref: 'City',
             required: false,
         },
