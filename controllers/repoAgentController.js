@@ -283,12 +283,7 @@ exports.changeDevice = async(req, res) =>{
 };
 
 exports.getAllRepoAgents = catchError(async(req, res) =>{
-    const agents = await RepoAgent.find()
-                    .populate('zoneId', 'name')
-                    .populate('stateId', 'name')
-                    .populate('cityId', 'name')
-                    .populate('createdBy', 'name')
-                    .exec();
+    const agents = await RepoAgent.find();
     return res.status(201).json({agents});
 });
 
