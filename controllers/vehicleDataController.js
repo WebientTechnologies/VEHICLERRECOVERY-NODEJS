@@ -350,7 +350,7 @@ exports.search = catchError(async (req, res) => {
       return res.status(400).json({ error: 'Invalid chasisNo length' }).sort({ regNo: 1 }).exec();;
     }
     const last6Digits = req.query.chasisNo.slice(-6);
-    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') } }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') }, status: { $in: ['search', 'pending']} }).sort({ regNo: 1 }).exec();;
   }
 
   return res.status(200).json({ data });
