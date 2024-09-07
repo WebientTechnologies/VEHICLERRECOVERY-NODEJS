@@ -340,7 +340,7 @@ exports.search = catchError(async (req, res) => {
   let data = [];
 
   if (req.query.lastDigit) {
-    data = await VehicleData.find({ lastDigit: req.query.lastDigit }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ lastDigit: req.query.lastDigit, status: { $in: ['search', 'pending']} }).sort({ regNo: 1 }).exec();;
   } else if (req.query.agreementNo) {
     data = await VehicleData.find({ agreementNo: req.query.agreementNo }).sort({ regNo: 1 }).exec();;
   } else if (req.query.engineNo) {
