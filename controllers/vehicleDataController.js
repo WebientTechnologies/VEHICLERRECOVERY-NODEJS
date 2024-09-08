@@ -12,79 +12,86 @@ const { use } = require("../routes/route");
 
 exports.uploadFile = catchError(async (req, res) => {
 
-  // Check if the file is provided
-  if (!req.file) {
-    return res.status(400).json({ error: "No file provided" });
-  }
+  try {
 
-  // Parse the Excel file
-  const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = xlsx.utils.sheet_to_json(sheet);
-
-  // Get the month from the request
-  const month = req.body.month;
-  const loadStatus = "Success";
-  const batchSize = 100; // Set an appropriate batch size
-  const recordsToInsert = [];
-  const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
-    .sort({ _id: -1 })
-    .exec();
-
-  // Extract the suffix number from the latest fileName
-  let fileNameSuffix = 1;
-  if (latestRecord && latestRecord.fileName) {
-    const match = latestRecord.fileName.match(/(\d+)/);
-    fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-  }
-
-  // Process each row and create records in the database
-  for (const row of data) {
-    const fileName = `${month}${fileNameSuffix}.xlsx`;
-    const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
-
-    const vehicleData = new VehicleData({
-      bankName: row.Bankname,
-      branch: row.Branch,
-      agreementNo: row.Agreementno,
-      customerName: row.Custname,
-      regNo: row.Regdno,
-      chasisNo: row.Chasisno,
-      engineNo: row.Engineno,
-      model: row.Model,
-      dlCode: row.Dlcode,
-      bucket: row.BUCKET,
-      emi: row.EMI,
-      color: row.COLOR,
-      maker: row.Maker,
-      callCenterNo1: row.Callcenterno1,
-      callCenterNo1Name: row.Callcenterno1name,
-      callCenterNo1Email: row.Callcenterno1mailid,
-      callCenterNo2: row.Callcenterno2,
-      callCenterNo2Name: row.Callcenterno2name,
-      callCenterNo2Email: row.Callcenterno2mailid,
-      callCenterNo3: row.Callcenterno3,
-      callCenterNo3Name: row.Callcenterno3name,
-      callCenterNo3Email: row.Callcenterno3mailid,
-      callCenterNo4: row.Callcenterno4,
-      callCenterNo4Name: row.Callcenterno4name,
-      callCenterNo4Email: row.Callcenterno4mailid,
-      lastDigit: lastDigit,
-      month: month,
-      loaStatus: loadStatus,
-      fileName: fileName,
-    });
-    recordsToInsert.push(vehicleData);
-    if (recordsToInsert.length >= batchSize) {
-      await VehicleData.insertMany(recordsToInsert);
-      recordsToInsert.length = 0; // Clear the array
+    // Check if the file is provided
+    if (!req.file) {
+      return res.status(400).json({ error: "No file provided" });
     }
 
-  }
+    // Parse the Excel file
+    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = xlsx.utils.sheet_to_json(sheet);
 
-  // Insert any remaining records
-  if (recordsToInsert.length > 0) {
-    await VehicleData.insertMany(recordsToInsert);
+    // Get the month from the request
+    const month = req.body.month;
+    const loadStatus = "Success";
+    const batchSize = 100; // Set an appropriate batch size
+    const recordsToInsert = [];
+    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
+      .sort({ _id: -1 })
+      .exec();
+
+    // Extract the suffix number from the latest fileName
+    let fileNameSuffix = 1;
+    if (latestRecord && latestRecord.fileName) {
+      const match = latestRecord.fileName.match(/(\d+)/);
+      fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
+    }
+    console.log(data.length);
+    // Process each row and create records in the database
+    for (const row of data) {
+      const fileName = `${month}${fileNameSuffix}.xlsx`;
+      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
+
+      const vehicleData = new VehicleData({
+        bankName: row.BANKNAME,
+        branch: row.BRANCH,
+        agreementNo: row.AGREEMENTNO,
+        customerName: row.CUSTNAME,
+        regNo: row.REGDNO,
+        chasisNo: row.CHASISNO,
+        engineNo: row.ENGINENO,
+        model: row.MODEL,
+        dlCode: row.DLCODE,
+        bucket: row.BUCKET,
+        emi: row.EMI,
+        color: row.COLOR,
+        maker: row.MAKER,
+        callCenterNo1: row.CALLCENTERNO1,
+        callCenterNo1Name: row.CALLCENTERNO1NAME,
+        callCenterNo1Email: row.CALLCENTERNO1MAILID,
+        callCenterNo2: row.CALLCENTERNO2,
+        callCenterNo2Name: row.CALLCENTERNO2NAME,
+        callCenterNo2Email: row.CALLCENTERNO2MAILID,
+        callCenterNo3: row.CALLCENTERNO3,
+        callCenterNo3Name: row.CALLCENTERNO3NAME,
+        callCenterNo3Email: row.CALLCENTERNO3MAILID,
+        callCenterNo4: row.CALLCENTERNO4,
+        callCenterNo4Name: row.CALLCENTERNO4NAME,
+        callCenterNo4Email: row.CALLCENTERNO4MAILID,
+        lastDigit: lastDigit,
+        month: month,
+        status: row.Status.toString().toLowerCase(),
+        uploadDate: row.UPLOADDATE,
+        loaStatus: loadStatus,
+        fileName: fileName,
+      });
+      recordsToInsert.push(vehicleData);
+      if (recordsToInsert.length >= batchSize) {
+        await VehicleData.insertMany(recordsToInsert);
+        recordsToInsert.length = 0; // Clear the array
+      }
+
+    }
+
+    // Insert any remaining records
+    if (recordsToInsert.length > 0) {
+      await VehicleData.insertMany(recordsToInsert);
+    }
+  } catch (e) {
+    console.log(e);
   }
 
   res.status(200).json({ message: "File uploaded successfully" });
@@ -177,6 +184,8 @@ exports.uploadBankWiseData = catchError(async (req, res) => {
       await VehicleData.insertMany(recordsToInsert);
       recordsToInsert.length = 0; // Clear the array
     }
+
+    console.log(lastDigit);
 
   }
 

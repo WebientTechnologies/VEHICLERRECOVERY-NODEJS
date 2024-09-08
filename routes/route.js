@@ -20,7 +20,7 @@ const searchDataController = require("../controllers/searchDataController");
 
 const multer = require("multer");
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024 } });
 
 const { auth, isAdmin, } = require('../middlewares/Auth');
 const { officeStafAuth } = require('../middlewares/officeStafAuth');
