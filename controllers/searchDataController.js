@@ -7,6 +7,9 @@ exports.getSearch = async (req, res) => {
     const search = await SearchData.find().populate({
       path: 'vehicleId',
       model: 'VehicleData'
+    }).populate({
+      path: 'seezerId',  // Populate seezerId field
+      model: 'RepoAgent',  // Use the RepoAgent model
     }).exec();
     return res.status(200).json({ search });
   } catch (error) {
