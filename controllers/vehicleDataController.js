@@ -1,12 +1,14 @@
 
 const xlsx = require("xlsx");
 const VehicleData = require("../models/vehiclesData");
+const SearchData = require("../models/searchData");
 const Request = require("../models/request");
 const { catchError } = require('../middlewares/CatchError');
 const fs = require('fs');
 const mongoosePaginate = require('mongoose-aggregate-paginate-v2');
 const { exec } = require('child_process');
 const archiver = require('archiver');
+const { use } = require("../routes/route");
 
 exports.uploadFile = catchError(async (req, res) => {
 
@@ -340,17 +342,17 @@ exports.search = catchError(async (req, res) => {
   let data = [];
 
   if (req.query.lastDigit) {
-    data = await VehicleData.find({ lastDigit: req.query.lastDigit, status: { $in: ['search', 'pending']} }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ lastDigit: req.query.lastDigit, status: { $in: ['search', 'pending'] } }).sort({ regNo: 1 }).exec();;
   } else if (req.query.agreementNo) {
     data = await VehicleData.find({ agreementNo: req.query.agreementNo }).sort({ regNo: 1 }).exec();;
   } else if (req.query.engineNo) {
     data = await VehicleData.find({ engineNo: req.query.engineNo }).sort({ regNo: 1 }).exec();;
-  }  else if (req.query.chasisNo) {
+  } else if (req.query.chasisNo) {
     if (req.query.chasisNo.length < 6) {
       return res.status(400).json({ error: 'Invalid chasisNo length' }).sort({ regNo: 1 }).exec();;
     }
     const last6Digits = req.query.chasisNo.slice(-6);
-    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') }, status: { $in: ['search', 'pending']} }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') }, status: { $in: ['search', 'pending'] } }).sort({ regNo: 1 }).exec();;
   }
 
   return res.status(200).json({ data });
@@ -660,7 +662,7 @@ exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
   const { status, seezerId, loadStatus, loadItem, latitude, longitude } = req.body;
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-  const dateTime = new Date(indianDate);  
+  const dateTime = new Date(indianDate);
   dateTime.setHours(dateTime.getHours() + 5);
   dateTime.setMinutes(dateTime.getMinutes() + 30);
 
@@ -687,7 +689,7 @@ exports.changeStatus = catchError(async (req, res) => {
     details.longitude = longitude;
   } else if (status === "release") {
     details.releaseAt = utcDateTime;
-  }else if (status === "repo") {
+  } else if (status === "repo") {
     details.releaseAt = utcDateTime;
   }
 
@@ -700,10 +702,10 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
   const userId = req.repoAgent._id;
   const type = 'RepoAgent';
   const { id } = req.params;
-  const {latitude, longitude} = req.body;
+  const { latitude, longitude } = req.body;
   const status = "search";
   const indianDate = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-  const dateTime = new Date(indianDate);  
+  const dateTime = new Date(indianDate);
   dateTime.setHours(dateTime.getHours() + 5);
   dateTime.setMinutes(dateTime.getMinutes() + 30);
 
@@ -717,7 +719,11 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
     vehicle.longitude = longitude;
     await vehicle.save();
   }
-  return res.status(200).json({ messege: "Message Sent Successfully!" });
+
+  const searchData = new SearchData({ id, userId });
+  const search = await searchData.save();
+
+  return res.status(200).json({ search: "Message Sent Successfully!" });
 })
 
 
@@ -757,9 +763,9 @@ exports.getAllData = catchError(async (req, res) => {
 });
 
 
-exports.holdDataGraph = catchError(async (req, res) =>{
+exports.holdDataGraph = catchError(async (req, res) => {
   const { interval } = req.query;
-  const indianTimeZoneOffset = 330; 
+  const indianTimeZoneOffset = 330;
   let aggregationPipeline = [];
 
   if (interval === 'day') {
@@ -826,7 +832,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
         },
       },
     ];
-  } 
+  }
   else if (interval === 'week') {
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -920,7 +926,7 @@ exports.holdDataGraph = catchError(async (req, res) =>{
         $replaceRoot: { newRoot: '$data' },
       },
     ];
-  } 
+  }
   else if (interval === 'month') {
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
@@ -928,33 +934,33 @@ exports.holdDataGraph = catchError(async (req, res) =>{
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'hold',
-        holdAt: {
-          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      {
+        $match: {
+          status: 'hold',
+          holdAt: {
+            $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { dayOfMonth: { $dayOfMonth: '$holdAt' } },
-        totalVehicle: { $sum: 1 },
+      {
+        $group: {
+          _id: { dayOfMonth: { $dayOfMonth: '$holdAt' } },
+          totalVehicle: { $sum: 1 },
+        },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: { $toString: '$_id.dayOfMonth' },
-        totalVehicle: '$totalVehicle',
+      {
+        $project: {
+          _id: 0,
+          range: { $toString: '$_id.dayOfMonth' },
+          totalVehicle: '$totalVehicle',
+        },
       },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
-  } 
+      {
+        $sort: { range: 1 },
+      },
+    ];
+  }
   else if (interval === 'year') {
     const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
     const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
@@ -963,57 +969,57 @@ exports.holdDataGraph = catchError(async (req, res) =>{
 
     aggregationPipeline = [
       {
-          $match: {
-              status: 'hold',
-              holdAt: {
-                  $gte: new Date(new Date().getFullYear(), 0, 1),
-                  $lt: new Date(new Date().getFullYear() + 1, 0, 1),
-              },
+        $match: {
+          status: 'hold',
+          holdAt: {
+            $gte: new Date(new Date().getFullYear(), 0, 1),
+            $lt: new Date(new Date().getFullYear() + 1, 0, 1),
           },
+        },
       },
       {
-          $group: {
-              _id: { month: { $month: '$holdAt' } },
-              totalVehicle: { $sum: 1 },
+        $group: {
+          _id: { month: { $month: '$holdAt' } },
+          totalVehicle: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          range: { $toString: '$_id.month' },
+          totalVehicle: '$totalVehicle',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $project: {
+          range: '$data.range',
+          totalVehicle: {
+            $mergeObjects: [
+              { range: '$data.range', totalVehicle: 0 },
+              '$data',
+            ],
           },
+        },
       },
       {
-          $project: {
-              _id: 0,
-              range: { $toString: '$_id.month' },
-              totalVehicle: '$totalVehicle',
-          },
+        $replaceRoot: { newRoot: '$totalVehicle' },
       },
       {
-          $group: {
-              _id: null,
-              data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
-          },
+        $sort: { range: 1 },
       },
-      {
-          $unwind: '$data',
-      },
-      {
-          $project: {
-              range: '$data.range',
-              totalVehicle: {
-                  $mergeObjects: [
-                      { range: '$data.range', totalVehicle: 0 },
-                      '$data',
-                  ],
-              },
-          },
-      },
-      {
-          $replaceRoot: { newRoot: '$totalVehicle' },
-      },
-      {
-          $sort: { range: 1 },
-      },
-  ];
+    ];
 
 
-  } 
+  }
   else {
     return res.status(400).json({ error: 'Invalid interval specified' });
   }
@@ -1024,9 +1030,9 @@ exports.holdDataGraph = catchError(async (req, res) =>{
 });
 
 
-exports.repoDataGraph = catchError(async (req, res) =>{
+exports.repoDataGraph = catchError(async (req, res) => {
   const { interval } = req.query;
-  const indianTimeZoneOffset = 330; 
+  const indianTimeZoneOffset = 330;
   let aggregationPipeline = [];
 
   if (interval === 'day') {
@@ -1093,7 +1099,7 @@ exports.repoDataGraph = catchError(async (req, res) =>{
         },
       },
     ];
-  } 
+  }
   else if (interval === 'week') {
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -1187,7 +1193,7 @@ exports.repoDataGraph = catchError(async (req, res) =>{
         $replaceRoot: { newRoot: '$data' },
       },
     ];
-  } 
+  }
   else if (interval === 'month') {
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
@@ -1195,91 +1201,91 @@ exports.repoDataGraph = catchError(async (req, res) =>{
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'repo',
-        repoAt: {
-          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      {
+        $match: {
+          status: 'repo',
+          repoAt: {
+            $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { dayOfMonth: { $dayOfMonth: '$repoAt' } },
-        totalVehicle: { $sum: 1 },
+      {
+        $group: {
+          _id: { dayOfMonth: { $dayOfMonth: '$repoAt' } },
+          totalVehicle: { $sum: 1 },
+        },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: { $toString: '$_id.dayOfMonth' },
-        totalVehicle: '$totalVehicle',
+      {
+        $project: {
+          _id: 0,
+          range: { $toString: '$_id.dayOfMonth' },
+          totalVehicle: '$totalVehicle',
+        },
       },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
-  } 
+      {
+        $sort: { range: 1 },
+      },
+    ];
+  }
   else if (interval === 'year') {
     const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
     const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'repo',
-        repoAt: {
-          $gte: new Date(new Date().getFullYear(), 0, 1),
-          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+      {
+        $match: {
+          status: 'repo',
+          repoAt: {
+            $gte: new Date(new Date().getFullYear(), 0, 1),
+            $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { month: { $month: '$repoAt' } },
-        totalVehicle: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: '$_id.month',
-        totalVehicle: '$totalVehicle',
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
-      },
-    },
-    {
-      $unwind: '$data',
-    },
-    {
-      $project: {
-        range: '$data.range',
-        totalVehicle: {
-          $mergeObjects: [
-            { range: '$data.range', totalVehicle: 0 },
-            '$data',
-          ],
+      {
+        $group: {
+          _id: { month: { $month: '$repoAt' } },
+          totalVehicle: { $sum: 1 },
         },
       },
-    },
-    {
-      $replaceRoot: { newRoot: '$totalVehicle' },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
+      {
+        $project: {
+          _id: 0,
+          range: '$_id.month',
+          totalVehicle: '$totalVehicle',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $project: {
+          range: '$data.range',
+          totalVehicle: {
+            $mergeObjects: [
+              { range: '$data.range', totalVehicle: 0 },
+              '$data',
+            ],
+          },
+        },
+      },
+      {
+        $replaceRoot: { newRoot: '$totalVehicle' },
+      },
+      {
+        $sort: { range: 1 },
+      },
+    ];
 
 
-  } 
+  }
   else {
     return res.status(400).json({ error: 'Invalid interval specified' });
   }
@@ -1289,9 +1295,9 @@ exports.repoDataGraph = catchError(async (req, res) =>{
   res.json({ data: result });
 });
 
-exports.releaseDataGraph = catchError(async (req, res) =>{
+exports.releaseDataGraph = catchError(async (req, res) => {
   const { interval } = req.query;
-  const indianTimeZoneOffset = 330; 
+  const indianTimeZoneOffset = 330;
   let aggregationPipeline = [];
 
   if (interval === 'day') {
@@ -1358,7 +1364,7 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
         },
       },
     ];
-  } 
+  }
   else if (interval === 'week') {
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -1452,7 +1458,7 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
         $replaceRoot: { newRoot: '$data' },
       },
     ];
-  } 
+  }
   else if (interval === 'month') {
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
@@ -1460,91 +1466,91 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'release',
-        releaseAt: {
-          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      {
+        $match: {
+          status: 'release',
+          releaseAt: {
+            $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { dayOfMonth: { $dayOfMonth: '$releaseAt' } },
-        totalVehicle: { $sum: 1 },
+      {
+        $group: {
+          _id: { dayOfMonth: { $dayOfMonth: '$releaseAt' } },
+          totalVehicle: { $sum: 1 },
+        },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: { $toString: '$_id.dayOfMonth' },
-        totalVehicle: '$totalVehicle',
+      {
+        $project: {
+          _id: 0,
+          range: { $toString: '$_id.dayOfMonth' },
+          totalVehicle: '$totalVehicle',
+        },
       },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
-  } 
+      {
+        $sort: { range: 1 },
+      },
+    ];
+  }
   else if (interval === 'year') {
     const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
     const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'release',
-        releaseAt: {
-          $gte: new Date(new Date().getFullYear(), 0, 1),
-          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+      {
+        $match: {
+          status: 'release',
+          releaseAt: {
+            $gte: new Date(new Date().getFullYear(), 0, 1),
+            $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { month: { $month: '$releaseAt' } },
-        totalVehicle: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: '$_id.month',
-        totalVehicle: '$totalVehicle',
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
-      },
-    },
-    {
-      $unwind: '$data',
-    },
-    {
-      $project: {
-        range: '$data.range',
-        totalVehicle: {
-          $mergeObjects: [
-            { range: '$data.range', totalVehicle: 0 },
-            '$data',
-          ],
+      {
+        $group: {
+          _id: { month: { $month: '$releaseAt' } },
+          totalVehicle: { $sum: 1 },
         },
       },
-    },
-    {
-      $replaceRoot: { newRoot: '$totalVehicle' },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
+      {
+        $project: {
+          _id: 0,
+          range: '$_id.month',
+          totalVehicle: '$totalVehicle',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $project: {
+          range: '$data.range',
+          totalVehicle: {
+            $mergeObjects: [
+              { range: '$data.range', totalVehicle: 0 },
+              '$data',
+            ],
+          },
+        },
+      },
+      {
+        $replaceRoot: { newRoot: '$totalVehicle' },
+      },
+      {
+        $sort: { range: 1 },
+      },
+    ];
 
 
-  } 
+  }
   else {
     return res.status(400).json({ error: 'Invalid interval specified' });
   }
@@ -1554,9 +1560,9 @@ exports.releaseDataGraph = catchError(async (req, res) =>{
   res.json({ data: result });
 });
 
-exports.searchDataGraph = catchError(async (req, res) =>{
+exports.searchDataGraph = catchError(async (req, res) => {
   const { interval } = req.query;
-  const indianTimeZoneOffset = 330; 
+  const indianTimeZoneOffset = 330;
   let aggregationPipeline = [];
 
   if (interval === 'day') {
@@ -1573,7 +1579,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
                     $toDate: {
                       $subtract: [
                         { $toDate: { $substr: ['$searchedAt', 0, 24] } },
-                        { $multiply: [60000, indianTimeZoneOffset] }, 
+                        { $multiply: [60000, indianTimeZoneOffset] },
                       ],
                     },
                   },
@@ -1585,7 +1591,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
                   date: {
                     $subtract: [
                       new Date(),
-                      { $multiply: [60000, indianTimeZoneOffset] }, 
+                      { $multiply: [60000, indianTimeZoneOffset] },
                     ],
                   },
                 },
@@ -1623,7 +1629,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
         },
       },
     ];
-  } 
+  }
   else if (interval === 'week') {
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -1717,7 +1723,7 @@ exports.searchDataGraph = catchError(async (req, res) =>{
         $replaceRoot: { newRoot: '$data' },
       },
     ];
-  } 
+  }
   else if (interval === 'month') {
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const nextMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
@@ -1725,91 +1731,91 @@ exports.searchDataGraph = catchError(async (req, res) =>{
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'search',
-        searchedAt: {
-          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      {
+        $match: {
+          status: 'search',
+          searchedAt: {
+            $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { dayOfMonth: { $dayOfMonth: '$searchedAt' } },
-        totalVehicle: { $sum: 1 },
+      {
+        $group: {
+          _id: { dayOfMonth: { $dayOfMonth: '$searchedAt' } },
+          totalVehicle: { $sum: 1 },
+        },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: { $toString: '$_id.dayOfMonth' },
-        totalVehicle: '$totalVehicle',
+      {
+        $project: {
+          _id: 0,
+          range: { $toString: '$_id.dayOfMonth' },
+          totalVehicle: '$totalVehicle',
+        },
       },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
-  } 
+      {
+        $sort: { range: 1 },
+      },
+    ];
+  }
   else if (interval === 'year') {
     const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
     const nextYearStart = new Date(new Date().getFullYear() + 1, 0, 1);
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     aggregationPipeline = [
-    {
-      $match: {
-        status: 'search',
-        searchedAt: {
-          $gte: new Date(new Date().getFullYear(), 0, 1),
-          $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+      {
+        $match: {
+          status: 'search',
+          searchedAt: {
+            $gte: new Date(new Date().getFullYear(), 0, 1),
+            $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+          },
         },
       },
-    },
-    {
-      $group: {
-        _id: { month: { $month: '$searchedAt' } },
-        totalVehicle: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        range: '$_id.month',
-        totalVehicle: '$totalVehicle',
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
-      },
-    },
-    {
-      $unwind: '$data',
-    },
-    {
-      $project: {
-        range: '$data.range',
-        totalVehicle: {
-          $mergeObjects: [
-            { range: '$data.range', totalVehicle: 0 },
-            '$data',
-          ],
+      {
+        $group: {
+          _id: { month: { $month: '$searchedAt' } },
+          totalVehicle: { $sum: 1 },
         },
       },
-    },
-    {
-      $replaceRoot: { newRoot: '$totalVehicle' },
-    },
-    {
-      $sort: { range: 1 },
-    },
-  ];
+      {
+        $project: {
+          _id: 0,
+          range: '$_id.month',
+          totalVehicle: '$totalVehicle',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: { $push: { range: '$range', totalVehicle: '$totalVehicle' } },
+        },
+      },
+      {
+        $unwind: '$data',
+      },
+      {
+        $project: {
+          range: '$data.range',
+          totalVehicle: {
+            $mergeObjects: [
+              { range: '$data.range', totalVehicle: 0 },
+              '$data',
+            ],
+          },
+        },
+      },
+      {
+        $replaceRoot: { newRoot: '$totalVehicle' },
+      },
+      {
+        $sort: { range: 1 },
+      },
+    ];
 
 
-  } 
+  }
   else {
     return res.status(400).json({ error: 'Invalid interval specified' });
   }
