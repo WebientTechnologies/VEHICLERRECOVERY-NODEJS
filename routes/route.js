@@ -13,6 +13,7 @@ const idCardController = require('../controllers/idCardController');
 const vehicleController = require("../controllers/vehicleDataController");
 const requestController = require("../controllers/requestController");
 const loginController = require("../controllers/loginController");
+const searchDataController = require("../controllers/searchDataController");
 
 
 
@@ -151,6 +152,7 @@ router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentControll
 
 //Report//
 router.get("/search-vehicle-list-by-staff", officeStafAuth, vehicleController.searchedVehicleList);
+router.get("/getSearch", officeStafAuth, searchDataController.getSearch);
 
 //Request//
 router.get("/request-for-staff", officeStafAuth, requestController.getRequests);

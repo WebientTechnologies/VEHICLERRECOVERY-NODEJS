@@ -720,7 +720,7 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
     await vehicle.save();
   }
 
-  const searchData = new SearchData({ id, userId });
+  const searchData = new SearchData({ vehicleId: id, seezerId: userId, createdAt: utcDateTime });
   const search = await searchData.save();
 
   return res.status(200).json({ search: "Message Sent Successfully!" });
