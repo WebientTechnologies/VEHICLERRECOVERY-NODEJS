@@ -1,13 +1,13 @@
-const express  = require("express");
+const express = require("express");
 const router = express.Router();
 
 const userController = require('../controllers/userController');
 const bankController = require('../controllers/bankController');
 const zoneController = require('../controllers/zoneController');
 const stateController = require('../controllers/stateController');
-const cityController =  require('../controllers/cityController');
+const cityController = require('../controllers/cityController');
 const emiAgentController = require('../controllers/emiAgentController');
-const officeStafController =  require('../controllers/officeStafController');
+const officeStafController = require('../controllers/officeStafController');
 const repoAgentController = require('../controllers/repoAgentController');
 const idCardController = require('../controllers/idCardController');
 const vehicleController = require("../controllers/vehicleDataController");
@@ -21,14 +21,14 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const {auth, isAdmin,}  = require('../middlewares/Auth');
-const {officeStafAuth} = require('../middlewares/officeStafAuth');
-const {agentAuth} = require('../middlewares/agentAuth');
-const { imageSingleUpload , imageMultiUpload, imageBulkUpload} = require("../middlewares/multer");
+const { auth, isAdmin, } = require('../middlewares/Auth');
+const { officeStafAuth } = require('../middlewares/officeStafAuth');
+const { agentAuth } = require('../middlewares/agentAuth');
+const { imageSingleUpload, imageMultiUpload, imageBulkUpload } = require("../middlewares/multer");
 
 //=========================================================================================================//
 // Home 
-router.get("/", (req, res) =>{
+router.get("/", (req, res) => {
     res.send("Welcome to Vehicle Recovery Backend");
 });
 
@@ -36,15 +36,15 @@ router.get("/", (req, res) =>{
 router.post("/login", loginController.login);
 
 
-                                        //****Admin Routes ****//
+//****Admin Routes ****//
 
 //User Route//
 router.post("/register-user", userController.signUp);
 router.post("/login-user", userController.login);
 router.get("/my-profile", auth, userController.getMyProfile);
 router.put("/update-my-profile", auth, userController.updateMyProfile);
-router.post("/forget-password",  userController.forgotPassword);
-router.post("/reset-password",  userController.resetPassword);
+router.post("/forget-password", userController.forgotPassword);
+router.post("/reset-password", userController.resetPassword);
 router.post("/change-password", auth, userController.updatePassword);
 
 //Bank Route//
@@ -55,16 +55,16 @@ router.get("/get-bank-by-id/:id", auth, bankController.getBankById);
 
 //zone Route//
 router.post("/create-zone", auth, zoneController.createZone);
-router.get("/zones",  zoneController.getZones);
+router.get("/zones", zoneController.getZones);
 
 //State Route//
 router.post("/create-state", auth, stateController.createState);
-router.get("/get-all-states",  stateController.getAllState);
-router.get("/get-state-by-zone/:zoneId",  stateController.getByZone);
+router.get("/get-all-states", stateController.getAllState);
+router.get("/get-state-by-zone/:zoneId", stateController.getByZone);
 
 //City Route//
 router.post("/create-city", auth, cityController.createCity);
-router.get("/get-all-city",  cityController.getAllCity);
+router.get("/get-all-city", cityController.getAllCity);
 router.get("/get-city-by-state/:stateId", cityController.getByState);
 
 //Agent Route//
@@ -83,13 +83,14 @@ router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 
 //Repo Agent Route//
 router.post("/create-repo-agent", auth, repoAgentController.createRepoAgent);
-router.post("/register-repo-agent",  repoAgentController.registerRepoAgent);
+router.post("/register-repo-agent", repoAgentController.registerRepoAgent);
 router.put("/change-agent-status/:id", auth, repoAgentController.changeStatus);
 router.put("/change-agent-device/:id", auth, repoAgentController.changeDevice);
 router.put("/change-agent-password/:id", auth, repoAgentController.changePassword);
 router.get("/get-all-repo-agents", repoAgentController.getAllRepoAgents);
 router.get("/get-agent-by-id/:id", repoAgentController.getAgentById);
 router.get("/repo-agentId", repoAgentController.getNewAgentId);
+router.get("/getLastAgentId", repoAgentController.getLastAgentId);
 
 //id Card Route//
 router.post("/create-id-card", auth, imageBulkUpload, idCardController.createIdCard);
@@ -104,7 +105,7 @@ router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleContro
 router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/get-all-data", vehicleController.getAllData);
 router.get("/search", vehicleController.searchVehicle);
-router.get("/get-details-by-reg/:regNo",  vehicleController.getByRegNo);
+router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);
 router.get("/details", auth, vehicleController.getData);
 router.delete("/delete-data", auth, vehicleController.deleteData);
@@ -113,9 +114,9 @@ router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
 router.get("/export-data", vehicleController.exportsData);
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
-router.get("/hold-vehicle-list",  vehicleController.holdVehicleList);
-router.get("/repo-vehicle-list",  vehicleController.repoVehicleList);
-router.get("/release-vehicle-list",  vehicleController.releaseVehicleList);
+router.get("/hold-vehicle-list", vehicleController.holdVehicleList);
+router.get("/repo-vehicle-list", vehicleController.repoVehicleList);
+router.get("/release-vehicle-list", vehicleController.releaseVehicleList);
 router.get("/search-vehicle-list", auth, vehicleController.searchedVehicleList);
 router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVehicleList);
 
@@ -130,7 +131,7 @@ router.get("/search-graph", vehicleController.searchDataGraph);
 
 //================================================================================================//
 
-                        //****Office Staff Routes ****//
+//****Office Staff Routes ****//
 
 
 router.post("/login-office-staf", officeStafController.login);
@@ -157,11 +158,11 @@ router.put("/change-vehicle-status-by-staff/:id", officeStafAuth, vehicleControl
 
 
 //======================================================================================================//
-                                //****Repo Agent Routes****//
+//****Repo Agent Routes****//
 
 router.post("/login-repo-agent", repoAgentController.login);
 
-router.put("/hold-request", agentAuth, requestController.requestToRepoVehicle );
+router.put("/hold-request", agentAuth, requestController.requestToRepoVehicle);
 router.put("/search-vehicle/:id", agentAuth, vehicleController.searchedVehicleStatus);
 router.put("/update-password-by-agent", agentAuth, repoAgentController.changePassord);
 router.get("/agent-dashboard", agentAuth, repoAgentController.agentDashboard);
