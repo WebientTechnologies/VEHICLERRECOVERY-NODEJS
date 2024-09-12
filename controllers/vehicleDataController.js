@@ -74,7 +74,7 @@ exports.uploadFile = catchError(async (req, res) => {
         lastDigit: lastDigit,
         month: month,
         status: row.Status.toString().toLowerCase(),
-        uploadDate: row.UPLOADDATE,
+        uploadDate: excelDateToJSDate(row.UPLOADDATE),
         loaStatus: loadStatus,
         fileName: fileName,
       });
@@ -85,6 +85,7 @@ exports.uploadFile = catchError(async (req, res) => {
       }
 
     }
+
 
     // Insert any remaining records
     if (recordsToInsert.length > 0) {
@@ -97,6 +98,16 @@ exports.uploadFile = catchError(async (req, res) => {
   res.status(200).json({ message: "File uploaded successfully" });
 
 });
+
+function excelDateToJSDate(excelDate) {
+  // Excel date serial starts from 1-Jan-1900
+  // Subtracting 1 because Excel serial date starts from 1
+  const excelDateAdjusted = excelDate - 1;
+
+  // Convert to JavaScript Date object
+  const date = new Date((excelDateAdjusted - (25567 + 1)) * 86400 * 1000);
+  return date;
+}
 
 exports.uploadBankWiseData = catchError(async (req, res) => {
 
