@@ -43,40 +43,38 @@ exports.uploadFile = catchError(async (req, res) => {
     // Process each row and create records in the database
     for (const row of data) {
       const fileName = `${month}${fileNameSuffix}.xlsx`;
-      const lastDigit = row.LastDigit || (row.Regdno && typeof row.Regdno === 'string' ? row.Regdno.slice(-4) : '');
+      const lastDigit = row.LastDigit || (row.RegistrationNumber && typeof row.RegistrationNumber === 'string' ? row.RegistrationNumber.slice(-4) : '');
 
       const vehicleData = new VehicleData({
+
         bankName: row.BANKNAME,
-        branch: row.BRANCH,
-        agreementNo: row.AGREEMENTNO,
-        customerName: row.CUSTNAME,
-        regNo: row.REGDNO,
-        chasisNo: row.CHASISNO,
-        engineNo: row.ENGINENO,
-        model: row.MODEL,
-        dlCode: row.DLCODE,
-        bucket: row.BUCKET,
+        branch: row.Branch,
+        regNo: row.RegistrationNumber,
+        loanNo: row.LoanNumber,
+        customerName: row.CustomerName,
+        model: row.Model,
+        maker: row.Make,
+        chasisNo: row.ChasisNumber,
+        engineNo: row.EngineNumber,
         emi: row.EMI,
-        color: row.COLOR,
-        maker: row.MAKER,
-        callCenterNo1: row.CALLCENTERNO1,
-        callCenterNo1Name: row.CALLCENTERNO1NAME,
-        callCenterNo1Email: row.CALLCENTERNO1MAILID,
-        callCenterNo2: row.CALLCENTERNO2,
-        callCenterNo2Name: row.CALLCENTERNO2NAME,
-        callCenterNo2Email: row.CALLCENTERNO2MAILID,
-        callCenterNo3: row.CALLCENTERNO3,
-        callCenterNo3Name: row.CALLCENTERNO3NAME,
-        callCenterNo3Email: row.CALLCENTERNO3MAILID,
-        callCenterNo4: row.CALLCENTERNO4,
-        callCenterNo4Name: row.CALLCENTERNO4NAME,
-        callCenterNo4Email: row.CALLCENTERNO4MAILID,
+        bucket: row.Bucket,
+        pos: row.POS,
+        tos: row.TOS,
+        allocation: row.Allocation,
+        callCenterNo1Name: row.ConfirmerName1,
+        callCenterNo1: row.ConfirmerNo1,
+        callCenterNo1Email: row.ConfirmerEmail1,
+        callCenterNo2Name: row.ConfirmerName2,
+        callCenterNo2: row.ConfirmerNo2,
+        callCenterNo2Email: row.ConfirmerEmail2,
+        callCenterNo3Name: row.ConfirmerName3,
+        callCenterNo3: row.ConfirmerNo3,
+        callCenterNo3Email: row.ConfirmerEmail3,
+        status: " ",
         lastDigit: lastDigit,
-        month: month,
-        status: row.Status.toString().toLowerCase(),
-        uploadDate: row.UPLOADDATE,
-        loaStatus: loadStatus,
-        fileName: fileName,
+        address: row.Address,
+        sec17: row.Sec17
+
       });
       recordsToInsert.push(vehicleData);
       if (recordsToInsert.length >= batchSize) {
@@ -85,6 +83,9 @@ exports.uploadFile = catchError(async (req, res) => {
       }
 
     }
+
+
+
 
     // Insert any remaining records
     if (recordsToInsert.length > 0) {
@@ -97,6 +98,16 @@ exports.uploadFile = catchError(async (req, res) => {
   res.status(200).json({ message: "File uploaded successfully" });
 
 });
+
+function excelDateToJSDate(excelDate) {
+  // Excel date serial starts from 1-Jan-1900
+  // Subtracting 1 because Excel serial date starts from 1
+  const excelDateAdjusted = excelDate - 1;
+
+  // Convert to JavaScript Date object
+  const date = new Date((excelDateAdjusted - (25567 + 1)) * 86400 * 1000);
+  return date;
+}
 
 exports.uploadBankWiseData = catchError(async (req, res) => {
 
@@ -317,6 +328,7 @@ exports.staffDashboard = catchError(async (req, res) => {
 
   const releaseCount = await VehicleData.countDocuments({ status: "release" });
   const searchCount = await VehicleData.countDocuments({ status: "search" });
+  const lastId = await VehicleData.findOne().sort({ _id: -1 }).select('_id');
 
 
   res.status(200).json({
@@ -325,6 +337,7 @@ exports.staffDashboard = catchError(async (req, res) => {
     repoCount: repoCount,
     releaseCount: releaseCount,
     searchCount: searchCount,
+    lastId: lastId._id
   });
 });
 
@@ -351,7 +364,7 @@ exports.search = catchError(async (req, res) => {
   let data = [];
 
   if (req.query.lastDigit) {
-    data = await VehicleData.find({ lastDigit: req.query.lastDigit, status: { $in: ['search', 'pending'] } }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ lastDigit: req.query.lastDigit }).sort({ regNo: 1 }).exec();;
   } else if (req.query.agreementNo) {
     data = await VehicleData.find({ agreementNo: req.query.agreementNo }).sort({ regNo: 1 }).exec();;
   } else if (req.query.engineNo) {
@@ -748,16 +761,20 @@ exports.getAllData = catchError(async (req, res) => {
     query.createdAt = { $gte: dateParam, $lt: new Date(dateParam.getTime() + 24 * 60 * 60 * 1000) };
 
   // Pagination parameters
+  const lastId = req.query.lastId;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10; // Default limit to 10 if not provided
   const skip = (page - 1) * limit;
 
   // Query data with pagination
-  data = await VehicleData.find(query).skip(skip).limit(limit);
-  totalRecords = await VehicleData.countDocuments(query);
+  data = await VehicleData.find({
+    _id: { $gt: lastId }
+  });
+  totalRecords = data.length;
 
   // Calculate total pages
   const totalPages = Math.ceil(totalRecords / limit);
+  console.log(totalPages);
 
   // Determine if there is a next page
   const nextPage = page < totalPages ? page + 1 : null;
