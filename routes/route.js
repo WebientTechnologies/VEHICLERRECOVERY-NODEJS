@@ -34,6 +34,7 @@ router.get("/", (req, res) => {
 });
 
 
+
 router.post("/login", loginController.login);
 
 
@@ -105,6 +106,7 @@ router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/get-all-data", vehicleController.getAllData);
+router.get("/show-all-data-admin", vehicleController.showAllDataAdmin);
 router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);
@@ -113,6 +115,7 @@ router.delete("/delete-data", auth, vehicleController.deleteData);
 router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
 router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
 router.get("/export-data", vehicleController.exportsData);
+router.get("/generateDb", vehicleController.generateDb);
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
 router.get("/hold-vehicle-list", vehicleController.holdVehicleList);

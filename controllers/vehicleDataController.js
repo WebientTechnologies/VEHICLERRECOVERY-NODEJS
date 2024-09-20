@@ -1,4 +1,9 @@
 
+const { chain } = require('stream-chain');
+const { parser } = require('stream-json');
+const { pick } = require('stream-json/filters/Pick');
+const { streamArray } = require('stream-json/streamers/StreamArray');
+const State = require('../models/state');
 const xlsx = require("xlsx");
 const VehicleData = require("../models/vehiclesData");
 const SearchData = require("../models/searchData");
@@ -9,6 +14,77 @@ const mongoosePaginate = require('mongoose-aggregate-paginate-v2');
 const { exec } = require('child_process');
 const archiver = require('archiver');
 const { use } = require("../routes/route");
+const readline = require('readline');
+const zlib = require('zlib');
+const sqlite3 = require('sqlite3').verbose();
+
+const exportData = () => {
+  return new Promise((resolve, reject) => {
+    // Use full path to mongoexport if necessary
+    const command = 'mongoexport -u anilvinayak -p VinayakAnil#123321 --db vehicle-recovery --collection vehicledatas --out data.json --jsonArray --authenticationDatabase admin';
+
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Export failed: ${stderr}`);
+        return reject(`Export failed: ${stderr}`);
+      }
+      console.log(`Export stdout: ${stdout}`);  // Debug output
+      resolve(stdout);
+    });
+  });
+};
+
+const compressFile = () => {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream('/var/www/export.zip');
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    output.on('close', () => {
+      resolve('Compression successful');
+    });
+
+    archive.on('error', (err) => {
+      reject(`Compression failed: ${err.message}`);
+    });
+
+    archive.pipe(output);
+    archive.file('vinayak.db', { name: 'vinayak.db' });
+    archive.finalize();
+  });
+};
+
+exports.generateDb = catchError(async (req, res) => {
+  try {
+    // Step 1: Export data from MongoDB
+    await exportData();
+
+    exec('python3 newmongo.py', async (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing Python script: ${error.message}`);
+        return;
+      }
+
+      if (stderr) {
+        console.error(`Python stderr: ${stderr}`);
+        return;
+      }
+
+      await compressFile();
+
+      exec('rm -rf vinayak.db', (error, stdout, stderr) => { });
+
+      console.log('Database generated and compressed successfully');
+      res.status(200).json({ message: 'db generated successfully' });
+
+    });
+
+
+  } catch (error) {
+    // Handle any errors
+    console.error(error);
+    res.status(500).json({ message: `Error: ${error.message}` });
+  }
+});
 
 exports.uploadFile = catchError(async (req, res) => {
 
@@ -19,83 +95,75 @@ exports.uploadFile = catchError(async (req, res) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
-    // Parse the Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet);
+    res.status(200).json({ message: "File uploaded successfully" });
 
-    // Get the month from the request
-    const month = req.body.month;
-    const loadStatus = "Success";
-    const batchSize = 100; // Set an appropriate batch size
-    const recordsToInsert = [];
-    const latestRecord = await VehicleData.findOne({ month: month, fileName: { $exists: true, $ne: null } })
-      .sort({ _id: -1 })
-      .exec();
+    setImmediate(async () => {
 
-    // Extract the suffix number from the latest fileName
-    let fileNameSuffix = 1;
-    if (latestRecord && latestRecord.fileName) {
-      const match = latestRecord.fileName.match(/(\d+)/);
-      fileNameSuffix = match ? parseInt(match[0]) + 1 : 1;
-    }
-    console.log(data.length);
-    // Process each row and create records in the database
-    for (const row of data) {
-      const fileName = `${month}${fileNameSuffix}.xlsx`;
-      const lastDigit = row.LastDigit || (row.RegistrationNumber && typeof row.RegistrationNumber === 'string' ? row.RegistrationNumber.slice(-4) : '');
+      // Parse the Excel file
+      const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = xlsx.utils.sheet_to_json(sheet);
 
-      const vehicleData = new VehicleData({
+      // Get the month from the request
+      const month = req.body.month;
+      const loadStatus = "Success";
+      const batchSize = 1000; // Set an appropriate batch size
+      const recordsToInsert = [];
 
-        bankName: row.BANKNAME,
-        branch: row.Branch,
-        regNo: row.RegistrationNumber,
-        loanNo: row.LoanNumber,
-        customerName: row.CustomerName,
-        model: row.Model,
-        maker: row.Make,
-        chasisNo: row.ChasisNumber,
-        engineNo: row.EngineNumber,
-        emi: row.EMI,
-        bucket: row.Bucket,
-        pos: row.POS,
-        tos: row.TOS,
-        allocation: row.Allocation,
-        callCenterNo1Name: row.ConfirmerName1,
-        callCenterNo1: row.ConfirmerNo1,
-        callCenterNo1Email: row.ConfirmerEmail1,
-        callCenterNo2Name: row.ConfirmerName2,
-        callCenterNo2: row.ConfirmerNo2,
-        callCenterNo2Email: row.ConfirmerEmail2,
-        callCenterNo3Name: row.ConfirmerName3,
-        callCenterNo3: row.ConfirmerNo3,
-        callCenterNo3Email: row.ConfirmerEmail3,
-        status: " ",
-        lastDigit: lastDigit,
-        address: row.Address,
-        sec17: row.Sec17
+      // Process each row and create records in the database
+      for (const row of data) {
+        //const fileName = `${month}${fileNameSuffix}.xlsx`;
+        const lastDigit = row.LastDigit || (row.RegistrationNumber && typeof row.RegistrationNumber === 'string' ? row.RegistrationNumber.slice(-4) : '');
 
-      });
-      recordsToInsert.push(vehicleData);
-      if (recordsToInsert.length >= batchSize) {
-        await VehicleData.insertMany(recordsToInsert);
-        recordsToInsert.length = 0; // Clear the array
+        const vehicleData = new VehicleData({
+
+          bankName: row.BANKNAME,
+          branch: row.Branch,
+          regNo: row.RegistrationNumber,
+          loanNo: row.LoanNumber,
+          customerName: row.CustomerName,
+          model: row.Model,
+          maker: row.Make,
+          chasisNo: row.ChasisNumber,
+          engineNo: row.EngineNumber,
+          emi: row.EMI,
+          bucket: row.Bucket,
+          pos: row.POS,
+          tos: row.TOS,
+          allocation: row.Allocation,
+          callCenterNo1Name: row.ConfirmerName1,
+          callCenterNo1: row.ConfirmerNo1,
+          callCenterNo1Email: row.ConfirmerEmail1,
+          callCenterNo2Name: row.ConfirmerName2,
+          callCenterNo2: row.ConfirmerNo2,
+          callCenterNo2Email: row.ConfirmerEmail2,
+          callCenterNo3Name: row.ConfirmerName3,
+          callCenterNo3: row.ConfirmerNo3,
+          callCenterNo3Email: row.ConfirmerEmail3,
+          status: " ",
+          lastDigit: lastDigit,
+          address: row.Address,
+          sec17: row.Sec17
+
+        });
+        recordsToInsert.push(vehicleData);
+        if (recordsToInsert.length >= batchSize) {
+          await VehicleData.insertMany(recordsToInsert);
+          recordsToInsert.length = 0; // Clear the array
+        }
+
       }
 
-    }
+      // Insert any remaining records
+      if (recordsToInsert.length > 0) {
+        await VehicleData.insertMany(recordsToInsert);
+      }
 
-
-
-
-    // Insert any remaining records
-    if (recordsToInsert.length > 0) {
-      await VehicleData.insertMany(recordsToInsert);
-    }
+    });
   } catch (e) {
     console.log(e);
   }
 
-  res.status(200).json({ message: "File uploaded successfully" });
 
 });
 
@@ -319,26 +387,35 @@ exports.getVehicleStatusCounts = catchError(async (req, res) => {
   });
 });
 
+
+
 exports.staffDashboard = catchError(async (req, res) => {
 
-  const totalCount = await VehicleData.countDocuments();
-  const holdCount = await VehicleData.countDocuments({ status: "hold" });
+  try {
+    // Aggregation pipeline
+    const [result] = await VehicleData.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
 
-  const repoCount = await VehicleData.countDocuments({ status: "repo" });
+          lastId: [{ $sort: { _id: -1 } }, { $limit: 1 }, { $project: { _id: 1 } }]
+        }
+      }
+    ]);
 
-  const releaseCount = await VehicleData.countDocuments({ status: "release" });
-  const searchCount = await VehicleData.countDocuments({ status: "search" });
-  const lastId = await VehicleData.findOne().sort({ _id: -1 }).select('_id');
+    const totalCount = result.total[0]?.count || 0;
 
+    const lastId = result.lastId[0]?._id || null;
 
-  res.status(200).json({
-    totalOnlineData: totalCount,
-    holdCount: holdCount,
-    repoCount: repoCount,
-    releaseCount: releaseCount,
-    searchCount: searchCount,
-    lastId: lastId._id
-  });
+    res.status(200).json({
+      totalOnlineData: totalCount,
+
+      lastId: lastId
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+
 });
 
 exports.searchVehicle = catchError(async (req, res) => {
@@ -750,42 +827,85 @@ exports.searchedVehicleStatus = catchError(async (req, res) => {
 
 
 exports.getAllData = catchError(async (req, res) => {
-  let data = [];
-  let totalRecords = 0;
-
-  let query = {};
-
-  const dateParam = req.query.date ? new Date(req.query.date) : null; // Use Date object for exact match
-
-  if (dateParam)
-    query.createdAt = { $gte: dateParam, $lt: new Date(dateParam.getTime() + 24 * 60 * 60 * 1000) };
-
   // Pagination parameters
   const lastId = req.query.lastId;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10; // Default limit to 10 if not provided
-  const skip = (page - 1) * limit;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10; // Default limit to 10 if not provided
 
-  // Query data with pagination
-  data = await VehicleData.find({
-    _id: { $gt: lastId }
-  });
-  totalRecords = data.length;
+  // Prepare query object
+  let filter = {};
+  if (lastId) {
+    filter._id = { $gt: lastId };
+  }
 
-  // Calculate total pages
-  const totalPages = Math.ceil(totalRecords / limit);
-  console.log(totalPages);
+  try {
+    // Get total records count for the filtered query
+    const totalRecords = await VehicleData.countDocuments(filter);
 
-  // Determine if there is a next page
-  const nextPage = page < totalPages ? page + 1 : null;
+    // Fetch data with pagination
+    const data = await VehicleData.find(filter)
+      .sort({ _id: 1 }) // Ensure sorting by _id for consistent pagination
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
 
-  return res.status(200).json({
-    data,
-    totalRecords,
-    totalPages,
-    currentPage: page,
-    nextPage,
-  });
+    // Calculate total pages
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    // Determine if there is a next page
+    const nextPage = page < totalPages ? page + 1 : null;
+
+    return res.status(200).json({
+      data,
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      nextPage,
+    });
+  } catch (error) {
+    // Handle error
+    console.error('Error fetching data:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+exports.showAllDataAdmin = catchError(async (req, res) => {
+  // Pagination parameters
+  const lastId = req.query.lastId;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10; // Default limit to 10 if not provided
+
+
+  try {
+    // Get total records count for the filtered query
+    const totalRecords = await VehicleData.countDocuments();
+
+    // Fetch data with pagination
+    const data = await VehicleData.find()
+      .sort({ _id: - 1 }) // Ensure sorting by _id for consistent pagination
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    // Determine if there is a next page
+    const nextPage = page < totalPages ? page + 1 : null;
+
+    return res.status(200).json({
+      data,
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      nextPage,
+    });
+  } catch (error) {
+    // Handle error
+    console.error('Error fetching data:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 
