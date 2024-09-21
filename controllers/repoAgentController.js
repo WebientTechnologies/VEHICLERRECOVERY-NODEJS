@@ -348,18 +348,29 @@ exports.changePassord = catchError(async (req, res) => {
 
 exports.agentDashboard = catchError(async (req, res) => {
 
-    const totalCount = await VehicleData.countDocuments();
-    const holdCount = await VehicleData.countDocuments({ status: "hold" });
+    try {
+        // Aggregation pipeline
+        const [result] = await VehicleData.aggregate([
+            {
+                $facet: {
+                    total: [{ $count: 'count' }],
 
-    const repoCount = await VehicleData.countDocuments({ status: "repo" });
+                    lastId: [{ $sort: { _id: -1 } }, { $limit: 1 }, { $project: { _id: 1 } }]
+                }
+            }
+        ]);
 
-    const releaseCount = await VehicleData.countDocuments({ status: "release" });
+        const totalCount = result.total[0]?.count || 0;
 
+        const lastId = result.lastId[0]?._id || null;
 
-    return res.status(200).json({
-        totalOnlineData: totalCount,
-        holdCount: holdCount,
-        repoCount: repoCount,
-        releaseCount: releaseCount,
-    });
+        res.status(200).json({
+            totalOnlineData: totalCount,
+
+            lastId: lastId
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+
 });

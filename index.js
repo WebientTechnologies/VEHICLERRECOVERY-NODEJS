@@ -4,19 +4,22 @@ const cookieParser = require('cookie-parser');
 const { ErrorMiddleware } = require("./middlewares/Error");
 const sls = require("serverless-http");
 const cors = require('cors');
+const path = require('path');
 
+
+app.use('/download', express.static(path.join(__dirname, 'public')));
 app.use('/backend/uploads', express.static('uploads'));
 app.use(
-    cors({
-        origin: [
-            "http://localhost:3000",
-            "https://vinayak-associates.vercel.app",
-            "http://127.0.0.1:3000",
-            "http://13.200.166.86"
-          ],
-          credentials: true,
-    })
-  );
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://vinayak-associates.vercel.app",
+      "http://127.0.0.1:3000",
+      "http://13.200.166.86"
+    ],
+    credentials: true,
+  })
+);
 
 app.use('/uploads', express.static('uploads'));
 // load config from env file
@@ -36,9 +39,11 @@ app.use("/backend/api/v1", route);
 module.exports.handler = sls(app);
 
 //start serve
-app.listen(PORT, () =>{
-    console.log(`Server started Successfully at ${PORT}`);
-})
+const server = app.listen(PORT, () => {
+  console.log(`Server started Successfully at ${PORT}`);
+});
+
+server.setTimeout(0);
 
 app.use(ErrorMiddleware);
 

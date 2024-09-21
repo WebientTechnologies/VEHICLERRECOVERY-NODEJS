@@ -14,6 +14,7 @@ const vehicleController = require("../controllers/vehicleDataController");
 const requestController = require("../controllers/requestController");
 const loginController = require("../controllers/loginController");
 const searchDataController = require("../controllers/searchDataController");
+const dashboardController = require("../controllers/dashboardController");
 
 
 
@@ -32,6 +33,7 @@ const { imageSingleUpload, imageMultiUpload, imageBulkUpload } = require("../mid
 router.get("/", (req, res) => {
     res.send("Welcome to Vehicle Recovery Backend");
 });
+
 
 
 router.post("/login", loginController.login);
@@ -105,6 +107,7 @@ router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/get-all-data", vehicleController.getAllData);
+router.get("/show-all-data-admin", vehicleController.showAllDataAdmin);
 router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);
@@ -113,6 +116,7 @@ router.delete("/delete-data", auth, vehicleController.deleteData);
 router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
 router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
 router.get("/export-data", vehicleController.exportsData);
+router.get("/generateDb", vehicleController.generateDb);
 // Reports Route//
 router.get("/all-vehicle-list", auth, vehicleController.allVehicleList);
 router.get("/hold-vehicle-list", vehicleController.holdVehicleList);
@@ -123,6 +127,7 @@ router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVeh
 
 //Dashboard Route//
 router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
+router.get("/getDashboard", dashboardController.getDashboard);
 
 //Graph Routes
 router.get("/hold-graph", vehicleController.holdDataGraph);
@@ -136,6 +141,7 @@ router.get("/search-graph", vehicleController.searchDataGraph);
 
 
 router.post("/login-office-staf", officeStafController.login);
+router.post("/addVehicle", officeStafAuth, vehicleController.addVehicle);
 
 //Dashboard//
 router.get("/office-staff-dashboard", officeStafAuth, vehicleController.staffDashboard);
