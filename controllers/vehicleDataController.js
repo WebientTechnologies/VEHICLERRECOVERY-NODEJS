@@ -1,11 +1,7 @@
 
-const { chain } = require('stream-chain');
-const { parser } = require('stream-json');
-const { pick } = require('stream-json/filters/Pick');
-const { streamArray } = require('stream-json/streamers/StreamArray');
-const State = require('../models/state');
 const xlsx = require("xlsx");
 const VehicleData = require("../models/vehiclesData");
+const Dashboard = require("../models/dashboard");
 const SearchData = require("../models/searchData");
 const Request = require("../models/request");
 const { catchError } = require('../middlewares/CatchError');
@@ -13,13 +9,33 @@ const fs = require('fs');
 const mongoosePaginate = require('mongoose-aggregate-paginate-v2');
 const { exec } = require('child_process');
 const archiver = require('archiver');
-const { use } = require("../routes/route");
-const readline = require('readline');
-const zlib = require('zlib');
-const sqlite3 = require('sqlite3').verbose();
 
-const exportData = () => {
-  return new Promise((resolve, reject) => {
+
+const exportData = async () => {
+  return new Promise(async (resolve, reject) => {
+
+    const [result] = await VehicleData.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
+        }
+      }
+    ]);
+
+    const onlineDataCount = result.total[0]?.count || 0;
+
+    const dash = await Dashboard.countDocuments();
+    if (dash > 0) {
+      const [dd] = await Dashboard.find().limit(1);
+      dd.onlineDataCount = onlineDataCount;
+      dd.save();
+
+    } else {
+      const dashboard = new Dashboard({ onlineDataCount });
+      await dashboard.save();
+    }
+
+
     // Use full path to mongoexport if necessary
     const command = 'mongoexport -u anilvinayak -p VinayakAnil#123321 --db vehicle-recovery --collection vehicledatas --out data.json --jsonArray --authenticationDatabase admin';
 
@@ -84,6 +100,26 @@ exports.generateDb = catchError(async (req, res) => {
     console.error(error);
     res.status(500).json({ message: `Error: ${error.message}` });
   }
+});
+
+exports.addVehicle = catchError(async (req, res) => {
+
+  try {
+
+    const { bankName, regNo, customerName, maker, confirmBy, mobNo } = req.body;
+    const vehicle = new VehicleData({
+      bankName: bankName, regNo: regNo, customerName: customerName, maker: maker, confirmBy: confirmBy, mobNo: mobNo
+    });
+
+    await vehicle.save();
+
+    return res.status(200).json({ message: "Vehicle Added" });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: err });
+
+  }
+
 });
 
 exports.uploadFile = catchError(async (req, res) => {

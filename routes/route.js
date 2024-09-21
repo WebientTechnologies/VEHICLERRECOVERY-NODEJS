@@ -14,6 +14,7 @@ const vehicleController = require("../controllers/vehicleDataController");
 const requestController = require("../controllers/requestController");
 const loginController = require("../controllers/loginController");
 const searchDataController = require("../controllers/searchDataController");
+const dashboardController = require("../controllers/dashboardController");
 
 
 
@@ -126,6 +127,7 @@ router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVeh
 
 //Dashboard Route//
 router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
+router.get("/getDashboard", dashboardController.getDashboard);
 
 //Graph Routes
 router.get("/hold-graph", vehicleController.holdDataGraph);
@@ -139,6 +141,7 @@ router.get("/search-graph", vehicleController.searchDataGraph);
 
 
 router.post("/login-office-staf", officeStafController.login);
+router.post("/addVehicle", officeStafAuth, vehicleController.addVehicle);
 
 //Dashboard//
 router.get("/office-staff-dashboard", officeStafAuth, vehicleController.staffDashboard);

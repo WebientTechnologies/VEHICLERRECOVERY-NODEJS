@@ -404,6 +404,12 @@ const vehiclesdata = new mongoose.Schema(
             maxLength: 255,
 
         },
+        mobNo: {
+            type: String,
+            required: false,
+            maxLength: 255,
+
+        },
 
 
 
