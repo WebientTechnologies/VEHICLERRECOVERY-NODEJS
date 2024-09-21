@@ -6,6 +6,7 @@ exports.getDashboard = async (req, res) => {
     const dashboard = await Dashboard.find();
     return res.status(200).json({ dashboard });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: 'Something Went Wrong!' });
   }
 }

@@ -106,12 +106,17 @@ exports.addVehicle = catchError(async (req, res) => {
 
   try {
 
-    const { bankName, regNo, customerName, maker, confirmBy, mobNo } = req.body;
+    const { bankName, regNo, lastDigit, customerName, maker, confirmBy, mobNo } = req.body;
     const vehicle = new VehicleData({
-      bankName: bankName, regNo: regNo, customerName: customerName, maker: maker, confirmBy: confirmBy, mobNo: mobNo
+      bankName: bankName, regNo: regNo, lastDigit: lastDigit, customerName: customerName, maker: maker, confirmBy: confirmBy, mobNo: mobNo
     });
 
     await vehicle.save();
+
+    const [dd] = await Dashboard.find().limit(1);
+    dd.onlineDataCount = dd.onlineDataCount + 1;
+    dd.save();
+
 
     return res.status(200).json({ message: "Vehicle Added" });
   } catch (err) {
