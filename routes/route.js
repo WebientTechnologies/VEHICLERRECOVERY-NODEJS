@@ -23,7 +23,7 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024 } });
 
-const { auth, isAdmin, } = require('../middlewares/Auth');
+const { auth, isAdmin, checkStatus } = require('../middlewares/Auth');
 const { officeStafAuth } = require('../middlewares/officeStafAuth');
 const { agentAuth } = require('../middlewares/agentAuth');
 const { imageSingleUpload, imageMultiUpload, imageBulkUpload } = require("../middlewares/multer");
@@ -106,7 +106,7 @@ router.get("/cardId", auth, idCardController.getNewCardId);
 router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
-router.get("/get-all-data", vehicleController.getAllData);
+router.get("/get-all-data", checkStatus, vehicleController.getAllData);
 router.get("/show-all-data-admin", vehicleController.showAllDataAdmin);
 router.get("/search", vehicleController.searchVehicle);
 router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
@@ -127,7 +127,7 @@ router.get("/confirmation-vehicle-list", auth, vehicleController.confirmationVeh
 
 //Dashboard Route//
 router.get("/dashboard", auth, vehicleController.getVehicleStatusCounts);
-router.get("/getDashboard", dashboardController.getDashboard);
+router.get("/getDashboard", checkStatus, dashboardController.getDashboard);
 
 //Graph Routes
 router.get("/hold-graph", vehicleController.holdDataGraph);
