@@ -283,7 +283,7 @@ exports.changeDevice = async (req, res) => {
 };
 
 exports.getAllRepoAgents = catchError(async (req, res) => {
-    const agents = await RepoAgent.find();
+    const agents = await RepoAgent.find().sort({ createdAt: -1 });
     return res.status(201).json({ agents });
 });
 
