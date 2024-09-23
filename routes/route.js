@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 
 const userController = require('../controllers/userController');
 const bankController = require('../controllers/bankController');
@@ -23,6 +25,31 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024 } });
 
+const storageTest = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Save the images in 'uploads' folder
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}_${file.originalname}`); // Append timestamp to the original file name
+    }
+});
+
+const uploadTest = multer({
+    storage: storageTest,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
+    fileFilter: (req, file, cb) => {
+        const fileTypes = /jpeg|jpg|png|gif/;
+        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = fileTypes.test(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Only images are allowed!'));
+        }
+    }
+});
+
 const { auth, isAdmin, checkStatus } = require('../middlewares/Auth');
 const { officeStafAuth } = require('../middlewares/officeStafAuth');
 const { agentAuth } = require('../middlewares/agentAuth');
@@ -33,7 +60,6 @@ const { imageSingleUpload, imageMultiUpload, imageBulkUpload } = require("../mid
 router.get("/", (req, res) => {
     res.send("Welcome to Vehicle Recovery Backend");
 });
-
 
 
 router.post("/login", loginController.login);
@@ -80,7 +106,15 @@ router.put("/change-password/:id", auth, emiAgentController.changePassword);
 
 
 //Office Staf Route//
-router.post("/create-staf", auth, imageBulkUpload, officeStafController.createOfficestaf);
+router.post('/create-staf', uploadTest.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'signature', maxCount: 1 },
+    { name: 'aadhar', maxCount: 1 },
+    { name: 'pancard', maxCount: 1 },
+    { name: 'cheque', maxCount: 1 },
+    { name: 'licence', maxCount: 1 }
+]), officeStafController.createOfficestaf);
+//router.post("/create-staf", auth, imageBulkUpload, officeStafController.createOfficestaf);
 router.get("/get-staf", auth, officeStafController.getOfficeStaf);
 router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 
