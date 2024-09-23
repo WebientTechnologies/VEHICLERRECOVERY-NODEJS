@@ -13,7 +13,7 @@ const params = {
 // console.log(params);
 
 // Create an S3 instance
-const s3= new S3(params);
+const s3 = new S3(params);
 
 // Set the destination folder in your S3 bucket
 const s3Destination = "uploads/";
@@ -21,12 +21,39 @@ const s3Destination = "uploads/";
 // Create a multer storage engine for handling uploads
 const multerConfig = multer();
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Save the images in 'uploads' folder
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}_${file.originalname}`); // Append timestamp to the original file name
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = fileTypes.test(file.mimetype);
+
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images are allowed!'));
+    }
+  }
+});
+
+
+
 // Middleware to handle single image upload to S3
 exports.imageSingleUpload = (req, res, next) => {
   multerConfig.single("file")(req, res, (error) => {
     if (error) {
       console.error("Multer Error:", error);
-      return res.status(500).json({message:"Multer upload failed"});
+      return res.status(500).json({ message: "Multer upload failed" });
     }
 
     // Use the `req.file` object to access the uploaded file
@@ -42,13 +69,13 @@ exports.imageSingleUpload = (req, res, next) => {
       Key: `${s3Destination}${uniqueKey}`, // Set the S3 key for the uploaded file
       Body: req.file.buffer, // Use the file buffer from Multer
       ContentType: req.file.mimetype, // Set the content type based on the file's mimetype
-    //   ACL: "public-read", // Set access permissions as needed
+      //   ACL: "public-read", // Set access permissions as needed
     };
 
     s3.putObject(s3Params, (err, data) => {
       if (err) {
         console.error("S3 Upload Error:", err);
-        return res.status(500).json({message:"S3 upload failed"});
+        return res.status(500).json({ message: "S3 upload failed" });
       }
 
       // Optionally, you can store the S3 URL or other relevant information in the request for later use
@@ -69,7 +96,7 @@ exports.imageMultiUpload = (req, res, next) => {
   multerConfig.array("files[]")(req, res, (error) => {
     if (error) {
       console.error("Multer Error:", error);
-      return res.status(500).json({message:"Multer upload failed"});
+      return res.status(500).json({ message: "Multer upload failed" });
     }
 
     // Use the `req.files` array to access the uploaded files
@@ -92,7 +119,7 @@ exports.imageMultiUpload = (req, res, next) => {
 
       // Return a promise that resolves when the file is uploaded to S3
       return new Promise((resolve, reject) => {
-        
+
         s3.putObject(s3Params, (err, data) => {
           if (err) {
             console.error("S3 Upload Error:", err);
@@ -121,16 +148,16 @@ exports.imageMultiUpload = (req, res, next) => {
       })
       .catch((err) => {
         console.log({ err });
-        return res.status(500).json({message:"S3 upload failed"});
+        return res.status(500).json({ message: "S3 upload failed" });
       });
   });
 };
 
 
 
-exports.imageBulkUpload= (req, res, next)=>{
+exports.imageBulkUpload = (req, res, next) => {
   multerConfig.fields([
-    { name: "photo"},
+    { name: "photo" },
     { name: "signature" },
     { name: "aadhar" },
     { name: "pancard" },
