@@ -130,7 +130,10 @@ router.get("/repo-agentId", repoAgentController.getNewAgentId);
 router.get("/getLastAgentId", repoAgentController.getLastAgentId);
 
 //id Card Route//
-router.post("/create-id-card", auth, imageBulkUpload, idCardController.createIdCard);
+router.post("/create-id-card", auth, uploadTest.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'signature', maxCount: 1 },
+]), idCardController.createIdCard);
 router.post("/generate-qr/:cardId", auth, idCardController.generateQRCode);
 router.get("/get-card/:cardId", idCardController.getCardDetails);
 router.get("/get-all-cards", auth, idCardController.getAllCards);
