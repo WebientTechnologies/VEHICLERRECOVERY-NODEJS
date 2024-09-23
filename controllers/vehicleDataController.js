@@ -131,8 +131,13 @@ exports.uploadFile = catchError(async (req, res) => {
 
   try {
 
-    console.log(req.files.sheet[0].filename);
-    exec(`python3 newexcel.py --filePath "./public/${req.files.sheet[0].filename}`, async (error, stdout, stderr) => {
+    if (!req.files) {
+      return res.status(400).json({ error: "No file provided" });
+    }
+
+    const fn = req.files.sheet[0].filename;
+    exec(`python3 newexcel.py --filePath "./uploads/${fn}"`, async (error, stdout, stderr) => {
+
       if (error) {
         console.error(`Error executing Python script: ${error.message}`);
         return;
@@ -146,80 +151,7 @@ exports.uploadFile = catchError(async (req, res) => {
       res.status(200).json({ message: "File uploaded successfully" });
 
     });
-    return;
 
-    // Check if the file is provided
-    if (!req.file) {
-      return res.status(400).json({ error: "No file provided" });
-    }
-
-    res.status(200).json({ message: "File uploaded successfully" });
-
-    setImmediate(async () => {
-
-      // Parse the Excel file
-      const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = xlsx.utils.sheet_to_json(sheet);
-
-      // Get the month from the request
-      const fileName = req.file.fileName;
-      const month = req.body.month;
-      const loadStatus = "Success";
-      const batchSize = 1000; // Set an appropriate batch size
-      const recordsToInsert = [];
-
-      // Process each row and create records in the database
-      for (const row of data) {
-        //const fileName = `${month}${fileNameSuffix}.xlsx`;
-        const lastDigit = row.LastDigit || (row.RegistrationNumber && typeof row.RegistrationNumber === 'string' ? row.RegistrationNumber.slice(-4) : '');
-
-        const vehicleData = new VehicleData({
-
-          bankName: row.BANKNAME,
-          branch: row.Branch,
-          regNo: row.RegistrationNumber,
-          loanNo: row.LoanNumber,
-          customerName: row.CustomerName,
-          model: row.Model,
-          maker: row.Make,
-          chasisNo: row.ChasisNumber,
-          engineNo: row.EngineNumber,
-          emi: row.EMI,
-          bucket: row.Bucket,
-          pos: row.POS,
-          tos: row.TOS,
-          allocation: row.Allocation,
-          callCenterNo1Name: row.ConfirmerName1,
-          callCenterNo1: row.ConfirmerNo1,
-          callCenterNo1Email: row.ConfirmerEmail1,
-          callCenterNo2Name: row.ConfirmerName2,
-          callCenterNo2: row.ConfirmerNo2,
-          callCenterNo2Email: row.ConfirmerEmail2,
-          callCenterNo3Name: row.ConfirmerName3,
-          callCenterNo3: row.ConfirmerNo3,
-          callCenterNo3Email: row.ConfirmerEmail3,
-          status: " ",
-          lastDigit: lastDigit,
-          address: row.Address,
-          sec17: row.Sec17,
-          fileName: fileName
-
-        });
-        recordsToInsert.push(vehicleData);
-        if (recordsToInsert.length >= batchSize) {
-          await VehicleData.insertMany(recordsToInsert);
-          recordsToInsert.length = 0; // Clear the array
-        }
-
-      }
-
-      // Insert any remaining records
-      if (recordsToInsert.length > 0) {
-        await VehicleData.insertMany(recordsToInsert);
-      }
-
-    });
   } catch (e) {
     console.log(e);
   }
@@ -446,8 +378,6 @@ exports.getVehicleStatusCounts = catchError(async (req, res) => {
     confirmationCount: confirmationCount,
   });
 });
-
-
 
 exports.staffDashboard = catchError(async (req, res) => {
 
@@ -810,9 +740,13 @@ exports.deleteData = catchError(async (req, res) => {
 
 });
 
-exports.deleteDataByFIleName = catchError(async (req, res) => {
+exports.deleteDataByFileName = catchError(async (req, res) => {
   const fileName = new RegExp(req.params.fileName, 'i');
   const result = await VehicleData.deleteMany({ fileName: fileName });
+
+  const [dd] = await Dashboard.find().limit(1);
+  dd.onlineDataCount = dd.onlineDataCount - deletedCount;
+  dd.save();
 
   return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
 });

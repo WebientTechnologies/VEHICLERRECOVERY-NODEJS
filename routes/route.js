@@ -185,7 +185,7 @@ router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);
 router.get("/details", auth, vehicleController.getData);
 router.delete("/delete-data", auth, vehicleController.deleteData);
-router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
+router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFileName);
 router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
 router.get("/export-data", vehicleController.exportsData);
 router.get("/generateDb", vehicleController.generateDb);
