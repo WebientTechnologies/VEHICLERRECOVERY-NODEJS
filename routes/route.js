@@ -50,6 +50,39 @@ const uploadTest = multer({
     }
 });
 
+const storageSheet = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Save the images in 'uploads' folder
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${file.originalname}`); // Append timestamp to the original file name
+    }
+});
+
+const uploadSheet = multer({
+    storage: storageSheet,
+    limits: { fileSize: 500 * 1024 * 1024 }, // Limit file size to 500MB
+    fileFilter: (req, file, cb) => {
+        // Allowed file types
+        const fileTypes = /xlsx|csv/;
+        // Check the file extension
+        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+        // Check MIME type
+        const mimetypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/csv'
+        ];
+        const mimetype = mimetypes.includes(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Invalid file type.'));
+        }
+    }
+});
+
 const { auth, isAdmin, checkStatus } = require('../middlewares/Auth');
 const { officeStafAuth } = require('../middlewares/officeStafAuth');
 const { agentAuth } = require('../middlewares/agentAuth');
@@ -140,7 +173,9 @@ router.get("/get-all-cards", auth, idCardController.getAllCards);
 router.get("/cardId", auth, idCardController.getNewCardId);
 
 //Vehicle Data Route//
-router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
+router.post("/upload", auth, uploadSheet.fields([
+    { name: 'sheet', maxCount: 1 },
+]), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
 router.get("/get-all-data", checkStatus, vehicleController.getAllData);

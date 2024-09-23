@@ -131,6 +131,23 @@ exports.uploadFile = catchError(async (req, res) => {
 
   try {
 
+    console.log(req.files.sheet[0].filename);
+    exec(`python3 newexcel.py --filePath "./public/${req.files.sheet[0].filename}`, async (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing Python script: ${error.message}`);
+        return;
+      }
+
+      if (stderr) {
+        console.error(`Python stderr: ${stderr}`);
+        return;
+      }
+
+      res.status(200).json({ message: "File uploaded successfully" });
+
+    });
+    return;
+
     // Check if the file is provided
     if (!req.file) {
       return res.status(400).json({ error: "No file provided" });
@@ -146,6 +163,7 @@ exports.uploadFile = catchError(async (req, res) => {
       const data = xlsx.utils.sheet_to_json(sheet);
 
       // Get the month from the request
+      const fileName = req.file.fileName;
       const month = req.body.month;
       const loadStatus = "Success";
       const batchSize = 1000; // Set an appropriate batch size
@@ -184,7 +202,8 @@ exports.uploadFile = catchError(async (req, res) => {
           status: " ",
           lastDigit: lastDigit,
           address: row.Address,
-          sec17: row.Sec17
+          sec17: row.Sec17,
+          fileName: fileName
 
         });
         recordsToInsert.push(vehicleData);
