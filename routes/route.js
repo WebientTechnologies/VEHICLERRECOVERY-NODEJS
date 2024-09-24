@@ -27,7 +27,7 @@ const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024
 
 const storageTest = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Save the images in 'uploads' folder
+        cb(null, '/var/www/uploads/'); // Save the images in 'uploads' folder
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}_${file.originalname}`); // Append timestamp to the original file name

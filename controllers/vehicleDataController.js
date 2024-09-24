@@ -752,30 +752,55 @@ exports.deleteDataByFileName = catchError(async (req, res) => {
 });
 
 exports.getDataByFileName = catchError(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+
+  const skip = (page - 1) * limit;
+
   try {
-    const result = await VehicleData.aggregate([
+
+    const data = await VehicleData.aggregate([
       {
         // Group by fileName
         $group: {
           _id: "$fileName",
           count: { $sum: 1 },  // Count total documents (rows) under each fileName
-          bankName: { $last: "$bankName" },  // Get the first bankName
-          createdAt: { $last: "$createdAt" }  // Get the first customerName
+          bankName: { $last: "$bankName" },  // Get the last bankName
+          createdAt: { $last: "$createdAt" }  // Get the last createdAt
         }
       },
       {
-        // Sort by fileName if necessary
-        $sort: { _id: 1 }
+        // Sort by createdAt (most recent first)
+        $sort: { createdAt: -1 }
+      },
+      {
+        // Apply skip and limit for pagination
+        $skip: skip
+      },
+      {
+        $limit: limit
       }
     ]);
 
-    return res.status(200).json({ data: result });
+    const totalRecords = data.length;
+
+    const total = totalRecords > 0 ? totalRecords : 0;
+    const totalPages = Math.ceil(total / limit);
+    const nextPage = page < totalPages ? page + 1 : null;
+
+    return res.status(200).json({
+      data,
+      totalRecords: total,
+      totalPages,
+      currentPage: page,
+      nextPage
+    });
   } catch (err) {
     console.error("Error in aggregation:", err);
+    return res.status(500).json({ message: "Internal Server Error", error: err });
   }
-
-
 });
+
 
 exports.changeStatus = catchError(async (req, res) => {
   const { id } = req.params;
