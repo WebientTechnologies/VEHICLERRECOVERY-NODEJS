@@ -178,6 +178,7 @@ router.post("/upload", auth, uploadSheet.fields([
 ]), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
+router.get("/getDataByFileName", vehicleController.getDataByFileName);
 router.get("/get-all-data", checkStatus, vehicleController.getAllData);
 router.get("/show-all-data-admin", vehicleController.showAllDataAdmin);
 router.get("/search", vehicleController.searchVehicle);

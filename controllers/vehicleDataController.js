@@ -745,10 +745,36 @@ exports.deleteDataByFileName = catchError(async (req, res) => {
   const result = await VehicleData.deleteMany({ fileName: fileName });
 
   const [dd] = await Dashboard.find().limit(1);
-  dd.onlineDataCount = dd.onlineDataCount - deletedCount;
+  dd.onlineDataCount = dd.onlineDataCount - result.deletedCount;
   dd.save();
 
   return res.status(200).json({ message: `${result.deletedCount} records deleted successfully.` });
+});
+
+exports.getDataByFileName = catchError(async (req, res) => {
+  try {
+    const result = await VehicleData.aggregate([
+      {
+        // Group by fileName
+        $group: {
+          _id: "$fileName",
+          count: { $sum: 1 },  // Count total documents (rows) under each fileName
+          bankName: { $last: "$bankName" },  // Get the first bankName
+          createdAt: { $last: "$createdAt" }  // Get the first customerName
+        }
+      },
+      {
+        // Sort by fileName if necessary
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    return res.status(200).json({ data: result });
+  } catch (err) {
+    console.error("Error in aggregation:", err);
+  }
+
+
 });
 
 exports.changeStatus = catchError(async (req, res) => {

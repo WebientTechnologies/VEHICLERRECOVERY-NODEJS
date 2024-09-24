@@ -3,6 +3,8 @@ import pymongo
 from bson import ObjectId
 import time
 import argparse
+from datetime import datetime
+
 
 # MongoDB setup (adjust the connection string as needed)
 client = pymongo.MongoClient("mongodb://anilvinayak:VinayakAnil%23123321@127.0.0.1:27017/vehicle-recovery?authSource=admin&directConnection=true&serverSelectionTimeoutMS=2000&appName=vehicle-recovery")
@@ -59,9 +61,11 @@ def upload_file(file_path):
 
 def process_sheet_data(sheet_data, file_path, sheet_name):
     total_rows = len(sheet_data)
-    batch_size = 2000
+    batch_size = 1000
     records_to_insert = []
     inserted_records = 0
+
+    current_time = datetime.utcnow();
 
     # Process each row and create records for MongoDB
     for index, row in sheet_data.iterrows():
@@ -97,7 +101,8 @@ def process_sheet_data(sheet_data, file_path, sheet_name):
             "address": str(row.get("Address")),
             "sec17": str(row.get("Sec17")),
             "fileName": str(file_path).split("/")[2],
-            "month": "July"
+            "createdAt": current_time,
+            "updatedAt": current_time,
         }
 
         records_to_insert.append(vehicle_data)
