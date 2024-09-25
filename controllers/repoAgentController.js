@@ -79,7 +79,7 @@ exports.createRepoAgent = catchError(async (req, res) => {
 
 exports.registerRepoAgent = catchError(async (req, res) => {
 
-    const { zoneId, stateId, cityId, name, mobile, alternativeMobile, email, panCard, aadharCard, addressLine1, addressLine2, state, city, pincode, username, password } = req.body;
+    const { zoneId, stateId, cityId, name, mobile, alternativeMobile, email, panCard, aadharCard, addressLine1, addressLine2, pincode, username, password } = req.body;
 
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -116,6 +116,7 @@ exports.registerRepoAgent = catchError(async (req, res) => {
         nextagentId = 'S0001';
     }
 
+
     const newRepoAgent = new RepoAgent({
         agentId: nextagentId,
         zoneId,
@@ -129,8 +130,6 @@ exports.registerRepoAgent = catchError(async (req, res) => {
         aadharCard,
         addressLine1,
         addressLine2,
-        state,
-        city,
         pincode,
         username,
         password: hashedPassword,

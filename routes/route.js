@@ -27,7 +27,7 @@ const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024
 
 const storageTest = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Save the images in 'uploads' folder
+        cb(null, '/var/www/uploads/'); // Save the images in 'uploads' folder
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}_${file.originalname}`); // Append timestamp to the original file name
@@ -46,6 +46,39 @@ const uploadTest = multer({
             return cb(null, true);
         } else {
             cb(new Error('Only images are allowed!'));
+        }
+    }
+});
+
+const storageSheet = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Save the images in 'uploads' folder
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${file.originalname}`); // Append timestamp to the original file name
+    }
+});
+
+const uploadSheet = multer({
+    storage: storageSheet,
+    limits: { fileSize: 500 * 1024 * 1024 }, // Limit file size to 500MB
+    fileFilter: (req, file, cb) => {
+        // Allowed file types
+        const fileTypes = /xlsx|csv/;
+        // Check the file extension
+        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+        // Check MIME type
+        const mimetypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/csv'
+        ];
+        const mimetype = mimetypes.includes(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Invalid file type.'));
         }
     }
 });
@@ -140,9 +173,12 @@ router.get("/get-all-cards", auth, idCardController.getAllCards);
 router.get("/cardId", auth, idCardController.getNewCardId);
 
 //Vehicle Data Route//
-router.post("/upload", auth, upload.single("file"), vehicleController.uploadFile);
+router.post("/upload", auth, uploadSheet.fields([
+    { name: 'sheet', maxCount: 1 },
+]), vehicleController.uploadFile);
 router.post("/upload-bank-wise-data", auth, upload.single("file"), vehicleController.uploadBankWiseData);
 router.get("/get-data", auth, vehicleController.getUploadedData);
+router.get("/getDataByFileName", vehicleController.getDataByFileName);
 router.get("/get-all-data", checkStatus, vehicleController.getAllData);
 router.get("/show-all-data-admin", vehicleController.showAllDataAdmin);
 router.get("/search", vehicleController.searchVehicle);
@@ -150,7 +186,7 @@ router.get("/get-details-by-reg/:regNo", vehicleController.getByRegNo);
 router.get("/search-details", vehicleController.search);
 router.get("/details", auth, vehicleController.getData);
 router.delete("/delete-data", auth, vehicleController.deleteData);
-router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFIleName);
+router.delete("/delete-by-fileName/:fileName", auth, vehicleController.deleteDataByFileName);
 router.put("/change-vehicle-status/:id", auth, vehicleController.changeStatus);
 router.get("/export-data", vehicleController.exportsData);
 router.get("/generateDb", vehicleController.generateDb);
