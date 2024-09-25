@@ -9,37 +9,57 @@ const fs = require('fs');
 const mongoosePaginate = require('mongoose-aggregate-paginate-v2');
 const { exec } = require('child_process');
 const archiver = require('archiver');
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+  ws.send("hiii");
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  });
+});
 
 
 const exportData = async () => {
   return new Promise(async (resolve, reject) => {
 
-    const [result] = await VehicleData.aggregate([
-      {
-        $facet: {
-          total: [{ $count: 'count' }],
-        }
-      }
-    ]);
+    // const [result] = await VehicleData.aggregate([
+    //   {
+    //     $facet: {
+    //       total: [{ $count: 'count' }],
+    //     }
+    //   }
+    // ]);
 
-    const onlineDataCount = result.total[0]?.count || 0;
+    // const onlineDataCount = result.total[0]?.count || 0;
 
-    const dash = await Dashboard.countDocuments();
-    if (dash > 0) {
-      const [dd] = await Dashboard.find().limit(1);
-      dd.onlineDataCount = onlineDataCount;
-      dd.save();
+    // const dash = await Dashboard.countDocuments();
+    // if (dash > 0) {
+    //   const [dd] = await Dashboard.find().limit(1);
+    //   dd.onlineDataCount = onlineDataCount;
+    //   dd.save();
 
-    } else {
-      const dashboard = new Dashboard({ onlineDataCount });
-      await dashboard.save();
-    }
+    // } else {
+    //   const dashboard = new Dashboard({ onlineDataCount });
+    //   await dashboard.save();
+    // }
 
 
     // Use full path to mongoexport if necessary
     const command = 'mongoexport -u anilvinayak -p VinayakAnil#123321 --db vehicle-recovery --collection vehicledatas --out data.json --jsonArray --authenticationDatabase admin';
 
     exec(command, (error, stdout, stderr) => {
+      if (stdout) {
+        console.log(`Export stdout: ${stdout}`);
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ progress: stdout }));
+          }
+        });
+      }
+
       if (error) {
         console.error(`Export failed: ${stderr}`);
         return reject(`Export failed: ${stderr}`);
@@ -89,9 +109,14 @@ exports.generateDb = catchError(async (req, res) => {
 
       exec('rm -rf vinayak.db', (error, stdout, stderr) => { });
 
-      console.log('Database generated and compressed successfully');
-      res.status(200).json({ message: 'db generated successfully' });
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ progress: 'Db file generated successfully' }));
+        }
+      });
 
+
+      res.status(200).json({ message: 'db generated successfully' });
     });
 
 
@@ -136,20 +161,25 @@ exports.uploadFile = catchError(async (req, res) => {
     }
 
     const fn = req.files.sheet[0].filename;
-    exec(`python3 newexcel.py --filePath "./uploads/${fn}"`, async (error, stdout, stderr) => {
+    const pythonProcess = exec(`python3 newexcel.py --filePath "./uploads/${fn}"`);
 
-      if (error) {
-        console.error(`Error executing Python script: ${error.message}`);
-        return;
-      }
+    pythonProcess.stdout.on('data', (data) => {
+      // Parse the progress data from the Python script
+      console.log(data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ progress: data }));
+        }
+      });
+    });
 
-      if (stderr) {
-        console.error(`Python stderr: ${stderr}`);
-        return;
-      }
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Python stderr: ${data}`);
+    });
 
+    pythonProcess.on('close', (code) => {
+      console.log(`Python script finished with code ${code}`);
       res.status(200).json({ message: "File uploaded successfully" });
-
     });
 
   } catch (e) {

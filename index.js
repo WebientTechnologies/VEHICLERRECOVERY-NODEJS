@@ -15,7 +15,10 @@ app.use(
       "http://localhost:3000",
       "https://vinayak-associates.vercel.app",
       "http://127.0.0.1:3000",
-      "http://13.200.166.86"
+      "http://13.200.166.86",
+      "http://195.35.23.185",
+      "ws://localhost:8080",
+      "ws://195.35.23.185:8080"
     ],
     credentials: true,
   })

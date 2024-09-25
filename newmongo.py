@@ -1,6 +1,7 @@
 import sqlite3
-import json
-import ijson  # To install: pip install ijson
+import ijson
+import sys
+
 
 # Path to the JSON file
 json_file_path = 'data.json'
@@ -94,16 +95,27 @@ INSERT INTO vehicles (
     fileName,
     createdAt,
     updatedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 '''
 
 # Batch size for bulk insert
 batch_size = 1000
 batch_data = []
 
+# Count total records for progress calculation
+total_records = 0
+
+
+# Use ijson to stream the JSON file and count records
+with open(json_file_path, 'r', encoding='utf-8') as file:
+    parser = ijson.items(file, 'item')
+    
+
 # Use ijson to stream the JSON file
 with open(json_file_path, 'r', encoding='utf-8') as file:
     parser = ijson.items(file, 'item')
+
+    processed_records = 0  # To keep track of processed records
 
     for item in parser:
         created_at = item.get('createdAt', {}).get('$date', None)
@@ -149,18 +161,28 @@ with open(json_file_path, 'r', encoding='utf-8') as file:
         )
 
         batch_data.append(values)
+        processed_records += 1
 
+        # Insert in batches
         if len(batch_data) >= batch_size:
             cursor.executemany(insert_query, batch_data)
             conn.commit()  # Commit the batch
             batch_data.clear()  # Clear the batch
+            
+            # Progress update
+            percent_done = (processed_records / total_records) * 100
+            print(f"Inserted {processed_records} records. Progress: {percent_done:.2f}%")
+            sys.stdout.flush()
 
     # Insert remaining data
     if batch_data:
         cursor.executemany(insert_query, batch_data)
         conn.commit()
+        processed_records += len(batch_data)
+        percent_done = (processed_records / total_records) * 100
+        print(f"Inserted {processed_records} records. Progress: {percent_done:.2f}%")
+        sys.stdout.flush()
 
 # Close the connection
 conn.close()
-
-print("Data inserted successfully.")
+print("Data insertion complete.")

@@ -17,10 +17,6 @@ const requestController = require("../controllers/requestController");
 const loginController = require("../controllers/loginController");
 const searchDataController = require("../controllers/searchDataController");
 const dashboardController = require("../controllers/dashboardController");
-
-
-
-
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage, limits: { fileSize: 1000 * 1024 * 1024 } });
