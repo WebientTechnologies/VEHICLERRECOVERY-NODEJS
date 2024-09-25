@@ -25,47 +25,34 @@ wss.on('connection', (ws) => {
 const exportData = async () => {
   return new Promise(async (resolve, reject) => {
 
-    // const [result] = await VehicleData.aggregate([
-    //   {
-    //     $facet: {
-    //       total: [{ $count: 'count' }],
-    //     }
-    //   }
-    // ]);
-
-    // const onlineDataCount = result.total[0]?.count || 0;
-
-    // const dash = await Dashboard.countDocuments();
-    // if (dash > 0) {
-    //   const [dd] = await Dashboard.find().limit(1);
-    //   dd.onlineDataCount = onlineDataCount;
-    //   dd.save();
-
-    // } else {
-    //   const dashboard = new Dashboard({ onlineDataCount });
-    //   await dashboard.save();
-    // }
-
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ progress: 'Compiling data....' }));
+      }
+    });
 
     // Use full path to mongoexport if necessary
     const command = 'mongoexport -u anilvinayak -p VinayakAnil#123321 --db vehicle-recovery --collection vehicledatas --out data.json --jsonArray --authenticationDatabase admin';
 
-    exec(command, (error, stdout, stderr) => {
-      if (stdout) {
-        console.log(`Export stdout: ${stdout}`);
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ progress: stdout }));
-          }
-        });
-      }
+    const pythonProcess = exec(command);
 
-      if (error) {
-        console.error(`Export failed: ${stderr}`);
-        return reject(`Export failed: ${stderr}`);
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ progress: `Compiling : ${data.slice(-8)}` }));
+        }
+      });
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {  // If the command was successful
+        console.log(`finished successfully with code ${code}`);
+        resolve();  // Resolve the promise
+      } else {
+        console.error(`finished with error code ${code}`);
+        reject(new Error(`exited with code ${code}`));  // Reject the promise
       }
-      console.log(`Export stdout: ${stdout}`);  // Debug output
-      resolve(stdout);
     });
   });
 };
@@ -94,17 +81,28 @@ exports.generateDb = catchError(async (req, res) => {
     // Step 1: Export data from MongoDB
     await exportData();
 
-    exec('python3 newmongo.py', async (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error executing Python script: ${error.message}`);
-        return;
-      }
+    const pythonProcess = exec(`python3 newmongo.py`);
 
-      if (stderr) {
-        console.error(`Python stderr: ${stderr}`);
-        return;
-      }
+    pythonProcess.stdout.on('data', (data) => {
+      // Parse the progress data from the Python script
+      console.log(data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ progress: data }));
+        }
+      });
+    });
 
+    pythonProcess.stderr.on('data', (data) => {
+      console.log(`Python stderr: ${data}`);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ progress: data }));
+        }
+      });
+    });
+
+    pythonProcess.on('close', async (code) => {
       await compressFile();
 
       exec('rm -rf vinayak.db', (error, stdout, stderr) => { });
@@ -116,9 +114,8 @@ exports.generateDb = catchError(async (req, res) => {
       });
 
 
-      res.status(200).json({ message: 'db generated successfully' });
+      res.status(200).json({ message: 'Db file generated successfully' });
     });
-
 
   } catch (error) {
     // Handle any errors
