@@ -14,7 +14,6 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-  ws.send("hiii");
 
   ws.on('close', () => {
     console.log('Client disconnected');
@@ -37,7 +36,6 @@ const exportData = async () => {
     const pythonProcess = exec(command);
 
     pythonProcess.stderr.on('data', (data) => {
-      console.error(data);
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({ progress: `Compiling : ${data.slice(-8)}` }));
