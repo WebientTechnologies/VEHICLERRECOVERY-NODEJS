@@ -104,6 +104,8 @@ router.put("/update-my-profile", auth, userController.updateMyProfile);
 router.post("/forget-password", userController.forgotPassword);
 router.post("/reset-password", userController.resetPassword);
 router.post("/change-password", auth, userController.updatePassword);
+router.get("/adminDashboardCount/:doc", auth, userController.getAdminDashboard);
+router.get("/vehicleDataStastics", auth, userController.vehicleDataStastics);
 
 //Bank Route//
 router.post("/create-bank", auth, bankController.createBank);

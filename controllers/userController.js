@@ -4,6 +4,11 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { options } = require("../routes/route");
 const nodemailer = require('nodemailer');
+const Vehicle = require('../models/vehiclesData');
+const Dashboard = require('../models/dashboard');
+const searchData = require("../models/searchData");
+const repoAgent = require("../models/repoAgent");
+const { ObjectId } = require('mongodb');
 require("dotenv").config();
 
 
@@ -42,8 +47,6 @@ exports.signUp = async (req, res) => {
   }
 
 };
-
-
 
 exports.login = async (req, res) => {
   try {
@@ -119,7 +122,6 @@ exports.login = async (req, res) => {
   }
 }
 
-
 exports.getMyProfile = async (req, res) => {
   try {
     const authenticatedUser = req.user;
@@ -135,6 +137,63 @@ exports.getMyProfile = async (req, res) => {
     }
 
     return res.json({ user });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return res.status(500).json({ message: 'Something went wrong' });
+  }
+};
+
+exports.getAdminDashboard = async (req, res) => {
+  try {
+
+    const doc = req.params.doc;
+
+    if (doc === 'tc') {
+
+      const totalCount = await Dashboard.find();
+      const tcc = totalCount[0];
+      const tc = tcc.onlineDataCount;
+      return res.status(404).json({
+        data: tc
+      });
+    }
+    if (doc === 'hc') {
+
+      const holdCount = await Vehicle.countDocuments({ holdAt: { $exists: true } });
+      //const hc = holdCount
+
+      return res.status(404).json({
+        data: holdCount
+      });
+    }
+    if (doc === 'repo') {
+
+      const repoCount = await Vehicle.countDocuments({ repoAt: { $exists: true } });
+      //const hc = holdCount
+
+      return res.status(404).json({
+        data: repoCount
+      });
+    }
+    if (doc === 'rc') {
+
+      const count = await Vehicle.countDocuments({ releaseAt: { $exists: true } });
+      //const hc = holdCount
+
+      return res.status(404).json({
+        data: count
+      });
+    }
+    if (doc === 'cc') {
+
+      const count = await await Vehicle.countDocuments({ confirmDate: { $exists: true } });
+      //const hc = holdCount
+
+      return res.status(404).json({
+        data: count
+      });
+    }
+
   } catch (error) {
     console.error('Error fetching user:', error);
     return res.status(500).json({ message: 'Something went wrong' });
@@ -298,6 +357,57 @@ exports.updatePassword = async (req, res) => {
     return res.status(500).json({ message: 'Something went wrong' });
   }
 };
+
+
+exports.vehicleDataStastics = async (req, res) => {
+  try {
+    const data = await searchData.aggregate([
+      {
+        // Group by seezerId
+        $group: {
+          _id: "$seezerId",
+          count: { $sum: 1 },  // Count total documents under each seezerId
+          createdAt: { $first: "$createdAt" }  // Preserve the most recent createdAt
+        }
+      },
+      {
+        // Sort by createdAt (most recent first)
+        $sort: { createdAt: -1 }
+      },
+    ]);
+
+    // Use Promise.all to wait for all async operations
+    const stat = await Promise.all(
+      data.map(async (e) => {
+        try {
+          const seezerName = await repoAgent.findOne(
+            { _id: new ObjectId(e._id) },
+            { name: 1 }
+          );
+
+          if (seezerName) {
+            return { id: e._id, name: seezerName.name, count: e.count };
+          } else {
+            console.error("No record found for id:", e._id);
+            return null;  // Return null for missing data
+          }
+        } catch (error) {
+          console.error("Error fetching data for id:", e._id, error);
+          return null;  // Return null for errors
+        }
+      })
+    );
+
+    // Filter out any null entries from stat
+    const filteredStat = stat.filter(e => e !== null);
+
+    return res.status(200).json({ stat: filteredStat });
+  } catch (error) {
+    console.error("Error in vehicleDataStastics:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 
 
