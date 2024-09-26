@@ -153,7 +153,7 @@ exports.getAdminDashboard = async (req, res) => {
       const totalCount = await Dashboard.find();
       const tcc = totalCount[0];
       const tc = tcc.onlineDataCount;
-      return res.status(404).json({
+      return res.status(200).json({
         data: tc
       });
     }
@@ -162,7 +162,7 @@ exports.getAdminDashboard = async (req, res) => {
       const holdCount = await Vehicle.countDocuments({ holdAt: { $exists: true } });
       //const hc = holdCount
 
-      return res.status(404).json({
+      return res.status(200).json({
         data: holdCount
       });
     }
@@ -171,7 +171,7 @@ exports.getAdminDashboard = async (req, res) => {
       const repoCount = await Vehicle.countDocuments({ repoAt: { $exists: true } });
       //const hc = holdCount
 
-      return res.status(404).json({
+      return res.status(200).json({
         data: repoCount
       });
     }
@@ -180,7 +180,7 @@ exports.getAdminDashboard = async (req, res) => {
       const count = await Vehicle.countDocuments({ releaseAt: { $exists: true } });
       //const hc = holdCount
 
-      return res.status(404).json({
+      return res.status(200).json({
         data: count
       });
     }
@@ -189,7 +189,7 @@ exports.getAdminDashboard = async (req, res) => {
       const count = await await Vehicle.countDocuments({ confirmDate: { $exists: true } });
       //const hc = holdCount
 
-      return res.status(404).json({
+      return res.status(200).json({
         data: count
       });
     }
