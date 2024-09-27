@@ -456,7 +456,93 @@ exports.search = catchError(async (req, res) => {
   let data = [];
 
   if (req.query.lastDigit) {
-    data = await VehicleData.find({ lastDigit: req.query.lastDigit }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.aggregate([
+      {
+        // Filter the documents based on lastDigit from the query parameter
+        $match: {
+          lastDigit: req.query.lastDigit
+        }
+      },
+      {
+        // Add fields for alphabetical and numeric parts of regNo
+        $addFields: {
+          regNoAlpha: {
+            $ifNull: [
+              {
+                $regexFind: {
+                  input: "$regNo",
+                  regex: /^[A-Za-z]+/ // Extract alphabetic part
+                }
+              },
+              { match: "" }
+            ]
+          },
+          regNoNumeric: {
+            $ifNull: [
+              {
+                $regexFind: {
+                  input: "$regNo",
+                  regex: /\d+/ // Extract numeric part
+                }
+              },
+              { match: "0" }
+            ]
+          }
+        }
+      },
+      {
+        // Add zero padding to the numeric part for consistent sorting
+        $addFields: {
+          paddedRegNoNumeric: {
+            $cond: {
+              if: { $ne: ["$regNoNumeric.match", ""] },
+              then: {
+                $concat: [
+                  { $substr: [{ $literal: "00000" }, 0, { $subtract: [5, { $strLenCP: "$regNoNumeric.match" }] }] },
+                  "$regNoNumeric.match"
+                ]
+              },
+              else: "00000" // Default padding if no number is found
+            }
+          }
+        }
+      },
+      {
+        // Sort by alphabetical part, zero-padded numeric part, and by createdAt to get the latest record
+        $sort: {
+          "regNoAlpha.match": 1,
+          paddedRegNoNumeric: 1,
+          createdAt: -1 // Sort by createdAt in descending order to get the latest document for each regNo
+        }
+      },
+      {
+        // Group by regNo and keep only the latest document
+        $group: {
+          _id: "$regNo", // Group by regNo
+          latestData: { $first: "$$ROOT" } // Get the first (i.e., latest) document in each group
+        }
+      },
+      {
+        // Flatten the result to return only the latest data for each regNo
+        $replaceRoot: { newRoot: "$latestData" }
+      },
+      {
+        // Reapply sorting by regNo after grouping
+        $sort: {
+          "regNoAlpha.match": 1,
+          paddedRegNoNumeric: 1
+        }
+      },
+      {
+        // Remove unwanted fields from the response
+        $project: {
+          regNoAlpha: 0,
+          regNoNumeric: 0,
+          paddedRegNoNumeric: 0
+        }
+      }
+    ]).exec();
+
   } else if (req.query.agreementNo) {
     data = await VehicleData.find({ agreementNo: req.query.agreementNo }).sort({ regNo: 1 }).exec();;
   } else if (req.query.engineNo) {
@@ -466,7 +552,7 @@ exports.search = catchError(async (req, res) => {
       return res.status(400).json({ error: 'Invalid chasisNo length' }).sort({ regNo: 1 }).exec();;
     }
     const last6Digits = req.query.chasisNo.slice(-6);
-    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') }, status: { $in: ['search', 'pending'] } }).sort({ regNo: 1 }).exec();;
+    data = await VehicleData.find({ chasisNo: { $regex: (`${last6Digits}`, 'i') } }).sort({ regNo: 1 }).exec();;
   }
 
   return res.status(200).json({ data });
