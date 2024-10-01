@@ -261,20 +261,40 @@ exports.changePassword = async (req, res) => {
     }
 };
 
-exports.changeDevice = async (req, res) => {
+exports.confirmChangeDevice = async (req, res) => {
     try {
-        const { id, } = req.params;
-        const deviceId = null;
+        const { id } = req.params;
 
         const agent = await RepoAgent.findById(id);
 
         if (agent) {
-            agent.deviceId = deviceId;
+            agent.deviceId = agent.newDeviceId;
+            agent.newDeviceId = '';
             agent.save();
 
             return res.status(201).json({ message: "Device Changed Successfully!" });
         } else {
             return res.status(404).json({ message: "No Data Found" });
+        }
+    } catch (error) {
+        return res.status(201).json({ message: "Something Went Wrong!" });
+    }
+};
+
+exports.requestChangeDevice = async (req, res) => {
+    try {
+        const { mobileNo, deviceId } = req.params;
+
+        const agent = await RepoAgent.findOne({ mobile: mobileNo });
+
+        if (agent) {
+            agent.deviceId = '';
+            agent.newDeviceId = deviceId;
+            agent.save();
+
+            return res.status(201).json({ message: "Device Change Request Sent" });
+        } else {
+            return res.status(404).json({ message: "User Not Found" });
         }
     } catch (error) {
         return res.status(201).json({ message: "Something Went Wrong!" });

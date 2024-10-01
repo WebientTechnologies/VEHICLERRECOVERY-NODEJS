@@ -153,7 +153,7 @@ router.get("/office-stafId", auth, officeStafController.getLastStaffId);
 router.post("/create-repo-agent", auth, repoAgentController.createRepoAgent);
 router.post("/register-repo-agent", repoAgentController.registerRepoAgent);
 router.put("/change-agent-status/:id", auth, repoAgentController.changeStatus);
-router.put("/change-agent-device/:id", auth, repoAgentController.changeDevice);
+router.put("/change-agent-device", auth, repoAgentController.requestChangeDevice);
 router.put("/change-agent-password/:id", auth, repoAgentController.changePassword);
 router.get("/get-all-repo-agents", repoAgentController.getAllRepoAgents);
 router.get("/get-agent-by-id/:id", repoAgentController.getAgentById);
@@ -224,7 +224,7 @@ router.put("/update-password", officeStafAuth, officeStafController.changePassor
 //Repo Agent//
 router.post("/create-repo-agent-by-staff", officeStafAuth, repoAgentController.createRepoAgent);
 router.put("/change-agent-status-by-staff/:id", officeStafAuth, repoAgentController.changeStatus);
-router.put("/change-agent-device-by-staff/:id", officeStafAuth, repoAgentController.changeDevice);
+router.put("/change-agent-device-by-staff/:id", officeStafAuth, repoAgentController.confirmChangeDevice);
 router.put("/change-agent-password-staff/:id", officeStafAuth, repoAgentController.changePassword);
 
 //Report//

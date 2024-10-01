@@ -159,6 +159,11 @@ const repoagents = new mongoose.Schema(
             required: false,
             maxLength: 255,
         },
+        newDeviceId: {
+            type: String,
+            required: false,
+            maxLength: 255,
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             refPath: 'createdByType',
